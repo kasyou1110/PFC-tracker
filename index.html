@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0e0e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PFCトラッカー</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Content Area -->
+  <div id="content">
+
+    <!-- ===== TAB: 今日の食事 ===== -->
+    <div class="tab-panel active" id="panel-today">
+      <div class="page-title">今日の食事</div>
+
+      <!-- Kcal summary -->
+      <div class="card">
+        <div class="kcal-display">
+          <div class="current text-kcal" id="today-kcal">0</div>
+          <div class="target">/ 2700 kcal</div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:12px">
+          <div class="progress-fill" id="kcal-bar" style="background:var(--accent4);width:0%"></div>
+        </div>
+        <div class="pfc-grid">
+          <div class="pfc-item">
+            <div class="label text-p">タンパク質</div>
+            <div class="value text-p" id="today-p">0g</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" id="p-bar" style="background:var(--p-color);width:0%"></div></div>
+            <div class="goal">/ 178g</div>
+          </div>
+          <div class="pfc-item">
+            <div class="label text-f">脂質</div>
+            <div class="value text-f" id="today-f">0g</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" id="f-bar" style="background:var(--f-color);width:0%"></div></div>
+            <div class="goal">/ 75g</div>
+          </div>
+          <div class="pfc-item">
+            <div class="label text-c">炭水化物</div>
+            <div class="value text-c" id="today-c">0g</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" id="c-bar" style="background:var(--c-color);width:0%"></div></div>
+            <div class="goal">/ 328g</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meal list by timing -->
+      <div id="today-meal-list"></div>
+    </div>
+
+    <!-- ===== TAB: 料理 ===== -->
+    <div class="tab-panel" id="panel-recipe">
+      <div class="page-title">料理</div>
+
+      <!-- Create recipe -->
+      <div class="card">
+        <div class="card-title">新しい料理を作る</div>
+        <div class="form-group">
+          <label>料理名</label>
+          <input type="text" id="recipe-name" placeholder="例：鶏むね肉の照り焼き">
+        </div>
+        <div class="form-group">
+          <label>食材を追加</label>
+          <div style="display:flex;gap:8px">
+            <select id="recipe-food-select" style="flex:1">
+              <option value="">食品を選択</option>
+            </select>
+            <input type="number" id="recipe-food-gram" placeholder="g" style="width:70px" min="1">
+            <button class="btn btn-secondary btn-sm" onclick="App.addRecipeIngredient()">追加</button>
+          </div>
+        </div>
+        <div id="recipe-ingredient-list" class="ingredient-list"></div>
+        <div class="recipe-pfc-total" id="recipe-total-display">
+          <div class="flex-between" style="margin-bottom:6px">
+            <span style="font-size:13px;color:var(--text2)">合計</span>
+            <span id="recipe-total-kcal" class="text-kcal" style="font-size:16px;font-weight:700">0 kcal</span>
+          </div>
+          <div class="nutrition-row">
+            <div class="nutrition-badge"><div class="n-val text-p" id="recipe-total-p">0g</div><div class="n-lbl">P</div></div>
+            <div class="nutrition-badge"><div class="n-val text-f" id="recipe-total-f">0g</div><div class="n-lbl">F</div></div>
+            <div class="nutrition-badge"><div class="n-val text-c" id="recipe-total-c">0g</div><div class="n-lbl">C</div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="App.saveRecipe()">料理を保存</button>
+          <button class="btn btn-secondary" onclick="App.addRecipeToToday()">今日に追加</button>
+        </div>
+      </div>
+
+      <!-- Saved recipes -->
+      <div class="section-title">保存済み料理</div>
+      <div id="saved-recipe-list"></div>
+    </div>
+
+    <!-- ===== TAB: 単体記録 ===== -->
+    <div class="tab-panel" id="panel-single">
+      <div class="page-title">単体記録</div>
+      <div class="card">
+        <div class="form-group">
+          <label>食品</label>
+          <select id="single-food-select">
+            <option value="">食品を選択してください</option>
+          </select>
+        </div>
+        <div id="single-food-info" style="display:none" class="card" style="background:var(--bg3);margin-bottom:12px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">100gあたり</div>
+          <div class="nutrition-row">
+            <div class="nutrition-badge"><div class="n-val text-kcal" id="si-kcal">0</div><div class="n-lbl">kcal</div></div>
+            <div class="nutrition-badge"><div class="n-val text-p" id="si-p">0g</div><div class="n-lbl">P</div></div>
+            <div class="nutrition-badge"><div class="n-val text-f" id="si-f">0g</div><div class="n-lbl">F</div></div>
+            <div class="nutrition-badge"><div class="n-val text-c" id="si-c">0g</div><div class="n-lbl">C</div></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>グラム数</label>
+          <input type="number" id="single-gram" placeholder="100" min="1" oninput="App.updateSingleCalc()">
+        </div>
+        <div id="single-calc-display" style="display:none" class="card" style="background:var(--bg3);margin-bottom:12px">
+          <div class="flex-between" style="margin-bottom:6px">
+            <span style="font-size:13px;color:var(--text2)">摂取量</span>
+            <span id="single-calc-kcal" class="text-kcal" style="font-size:16px;font-weight:700">0 kcal</span>
+          </div>
+          <div class="nutrition-row">
+            <div class="nutrition-badge"><div class="n-val text-p" id="single-calc-p">0g</div><div class="n-lbl">P</div></div>
+            <div class="nutrition-badge"><div class="n-val text-f" id="single-calc-f">0g</div><div class="n-lbl">F</div></div>
+            <div class="nutrition-badge"><div class="n-val text-c" id="single-calc-c">0g</div><div class="n-lbl">C</div></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>食事タイミング</label>
+          <div class="timing-chips" id="single-timing-chips">
+            <div class="timing-chip active" data-val="朝食" onclick="App.selectTiming(this)">朝食</div>
+            <div class="timing-chip" data-val="昼食" onclick="App.selectTiming(this)">昼食</div>
+            <div class="timing-chip" data-val="夕食" onclick="App.selectTiming(this)">夕食</div>
+            <div class="timing-chip" data-val="間食" onclick="App.selectTiming(this)">間食</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="App.recordSingle()">記録する</button>
+      </div>
+    </div>
+
+    <!-- ===== TAB: 検索 ===== -->
+    <div class="tab-panel" id="panel-search">
+      <div class="page-title">検索</div>
+      <div class="sub-tabs">
+        <button class="sub-tab-btn active" onclick="App.switchSubTab('search','food',this)">食品</button>
+        <button class="sub-tab-btn" onclick="App.switchSubTab('search','recipe',this)">料理</button>
+      </div>
+
+      <!-- Food search -->
+      <div id="search-food-panel">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="food-search-input" placeholder="食品名で検索..." oninput="App.searchFoods()">
+        </div>
+        <div id="food-search-results"></div>
+      </div>
+
+      <!-- Recipe search -->
+      <div id="search-recipe-panel" style="display:none">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="recipe-search-input" placeholder="料理名で検索..." oninput="App.searchRecipes()">
+        </div>
+        <div id="recipe-search-results"></div>
+      </div>
+    </div>
+
+    <!-- ===== TAB: 食品登録 ===== -->
+    <div class="tab-panel" id="panel-register">
+      <div class="page-title">食品登録</div>
+      <div class="card">
+        <div class="card-title">新しい食品を登録</div>
+        <div class="form-group">
+          <label>食品名</label>
+          <input type="text" id="reg-name" placeholder="例：鶏むね肉（皮なし）">
+        </div>
+        <div class="form-group">
+          <label>100gあたりの栄養素</label>
+          <div class="form-row">
+            <div>
+              <label style="color:var(--accent4)">カロリー (kcal)</label>
+              <input type="number" id="reg-kcal" placeholder="0" min="0" step="0.1">
+            </div>
+            <div>
+              <label style="color:var(--p-color)">タンパク質 (g)</label>
+              <input type="number" id="reg-p" placeholder="0" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:8px">
+            <div>
+              <label style="color:var(--f-color)">脂質 (g)</label>
+              <input type="number" id="reg-f" placeholder="0" min="0" step="0.1">
+            </div>
+            <div>
+              <label style="color:var(--c-color)">炭水化物 (g)</label>
+              <input type="number" id="reg-c" placeholder="0" min="0" step="0.1">
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="App.registerFood()">登録する</button>
+      </div>
+
+      <!-- Registered foods list -->
+      <div class="section-title" style="margin-top:4px">登録済み食品</div>
+      <div id="food-master-list"></div>
+    </div>
+
+    <!-- ===== TAB: 栄養推移 ===== -->
+    <div class="tab-panel" id="panel-trend">
+      <div class="page-title">栄養推移</div>
+      <div class="period-btns">
+        <button class="period-btn active" onclick="App.setTrendPeriod(7, this)">7日</button>
+        <button class="period-btn" onclick="App.setTrendPeriod(14, this)">14日</button>
+        <button class="period-btn" onclick="App.setTrendPeriod(30, this)">30日</button>
+      </div>
+      <div class="card">
+        <div class="card-title">カロリー</div>
+        <div id="trend-kcal-wrap" style="position:relative;height:160px"><canvas id="trend-kcal-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">PFC</div>
+        <div id="trend-pfc-wrap" style="position:relative;height:200px"><canvas id="trend-pfc-chart"></canvas></div>
+      </div>
+      <div class="card" id="trend-avg-card">
+        <div class="card-title">期間平均</div>
+        <div class="flex-between" style="margin-bottom:8px">
+          <span style="color:var(--text2)">カロリー</span>
+          <span class="text-kcal font-bold" id="avg-kcal">- kcal</span>
+        </div>
+        <div class="pfc-grid">
+          <div class="pfc-item"><div class="label text-p">P</div><div class="value text-p" id="avg-p">-</div></div>
+          <div class="pfc-item"><div class="label text-f">F</div><div class="value text-f" id="avg-f">-</div></div>
+          <div class="pfc-item"><div class="label text-c">C</div><div class="value text-c" id="avg-c">-</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Tab bar -->
+  <nav id="tab-bar">
+    <button class="tab-btn active" onclick="App.switchTab('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      今日
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('recipe',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      料理
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('single',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      単体
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('search',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      検索
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('register',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      登録
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('trend',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      推移
+    </button>
+  </nav>
+</div>
+
+<!-- Add to today modal (from search/recipe) -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <button class="modal-close" onclick="App.closeModal()">×</button>
+      今日の食事に追加
+    </div>
+    <div id="modal-food-info" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>グラム数</label>
+      <input type="number" id="modal-gram" placeholder="100" min="1" oninput="App.updateModalCalc()">
+    </div>
+    <div id="modal-calc-display" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>食事タイミング</label>
+      <div class="timing-chips" id="modal-timing-chips">
+        <div class="timing-chip active" data-val="朝食" onclick="App.selectModalTiming(this)">朝食</div>
+        <div class="timing-chip" data-val="昼食" onclick="App.selectModalTiming(this)">昼食</div>
+        <div class="timing-chip" data-val="夕食" onclick="App.selectModalTiming(this)">夕食</div>
+        <div class="timing-chip" data-val="間食" onclick="App.selectModalTiming(this)">間食</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="App.confirmAddToToday()">追加する</button>
+  </div>
+</div>
+
+<!-- Recipe add-to-today modal -->
+<div class="modal-overlay" id="recipe-add-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <button class="modal-close" onclick="App.closeRecipeModal()">×</button>
+      料理を今日に追加
+    </div>
+    <div id="recipe-modal-info" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>食事タイミング</label>
+      <div class="timing-chips" id="recipe-modal-timing-chips">
+        <div class="timing-chip active" data-val="朝食" onclick="App.selectRecipeModalTiming(this)">朝食</div>
+        <div class="timing-chip" data-val="昼食" onclick="App.selectModalTiming(this)">昼食</div>
+        <div class="timing-chip" data-val="夕食" onclick="App.selectRecipeModalTiming(this)">夕食</div>
+        <div class="timing-chip" data-val="間食" onclick="App.selectRecipeModalTiming(this)">間食</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="App.confirmAddRecipeToToday()">追加する</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
