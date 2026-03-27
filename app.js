@@ -46,6 +46,8 @@ const App = (() => {
   let trendPeriod = 7;
   let kcalChart = null;
   let pfcChart = null;
+  let chatHistory = [];        // { role, content, streaming?, error? }
+  let chatStreaming = false;
 
   // ── Init ──────────────────────────────────────────────────────
   function init() {
@@ -64,6 +66,7 @@ const App = (() => {
     renderTodayMeals();
     renderFoodMasterList();
     renderSavedRecipes();
+    initChat();
 
     // Register SW
     if ('serviceWorker' in navigator) {
@@ -631,6 +634,243 @@ const App = (() => {
     }
   }
 
+  // ── AI Chat ───────────────────────────────────────────────────
+  function initChat() {
+    const key = store.get('apikey', '');
+    updateApiKeyStatus(key);
+  }
+
+  function toggleApikeyCard() {
+    const area = document.getElementById('apikey-input-area');
+    const isHidden = area.style.display === 'none' || area.style.display === '';
+    area.style.display = isHidden ? '' : 'none';
+    if (isHidden) {
+      const key = store.get('apikey', '');
+      document.getElementById('apikey-input').value = key;
+      document.getElementById('apikey-input').focus();
+    }
+  }
+
+  function saveApiKey() {
+    const key = document.getElementById('apikey-input').value.trim();
+    if (!key.startsWith('sk-ant-')) {
+      toast('APIキーが正しくありません（sk-ant- から始まります）');
+      return;
+    }
+    store.set('apikey', key);
+    updateApiKeyStatus(key);
+    document.getElementById('apikey-input-area').style.display = 'none';
+    toast('APIキーを保存しました');
+  }
+
+  function updateApiKeyStatus(key) {
+    const el = document.getElementById('apikey-status');
+    if (key) {
+      el.textContent = '設定済み ✓';
+      el.className = 'ok';
+    } else {
+      el.textContent = '未設定';
+      el.className = 'none';
+    }
+  }
+
+  function buildSystemPrompt() {
+    const meals = getTodayMeals();
+    const tot = meals.reduce((a, m) => ({
+      kcal: a.kcal + m.kcal, p: a.p + m.p, f: a.f + m.f, c: a.c + m.c
+    }), { kcal: 0, p: 0, f: 0, c: 0 });
+
+    const pctKcal = ((tot.kcal / GOALS.kcal) * 100).toFixed(0);
+    const pctP    = ((tot.p    / GOALS.p)    * 100).toFixed(0);
+    const pctF    = ((tot.f    / GOALS.f)    * 100).toFixed(0);
+    const pctC    = ((tot.c    / GOALS.c)    * 100).toFixed(0);
+
+    const mealLines = meals.length
+      ? meals.map(m =>
+          `  - ${m.timing}：${m.name}${m.gram ? `（${m.gram}g）` : ''} → ${Math.round(m.kcal)}kcal / P${m.p.toFixed(1)}g F${m.f.toFixed(1)}g C${m.c.toFixed(1)}g`
+        ).join('\n')
+      : '  （まだ記録なし）';
+
+    return `あなたは栄養アドバイザーです。ユーザーの今日の食事データをもとに、具体的で実践的なアドバイスをしてください。
+回答は日本語で、親しみやすく簡潔に。箇条書きや強調を適度に使って読みやすくしてください。
+
+## 今日の食事データ（${todayKey()}）
+
+### 目標値
+- カロリー: ${GOALS.kcal} kcal
+- タンパク質: ${GOALS.p}g
+- 脂質: ${GOALS.f}g
+- 炭水化物: ${GOALS.c}g
+
+### 現在の摂取量
+- カロリー: ${Math.round(tot.kcal)} kcal（目標の${pctKcal}%）
+- タンパク質: ${tot.p.toFixed(1)}g（目標の${pctP}%）
+- 脂質: ${tot.f.toFixed(1)}g（目標の${pctF}%）
+- 炭水化物: ${tot.c.toFixed(1)}g（目標の${pctC}%）
+
+### 食事記録
+${mealLines}`;
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg || chatStreaming) return;
+    input.value = '';
+    input.style.height = 'auto';
+    await sendChatMessage(msg);
+  }
+
+  async function sendQuick(msg) {
+    if (chatStreaming) return;
+    await sendChatMessage(msg);
+  }
+
+  async function sendChatMessage(userMsg) {
+    const apiKey = store.get('apikey', '');
+    if (!apiKey) {
+      toast('APIキーを設定してください');
+      toggleApikeyCard();
+      return;
+    }
+
+    // Hide quick prompts after first message
+    const qp = document.getElementById('quick-prompts');
+    if (qp) qp.style.display = 'none';
+
+    chatHistory.push({ role: 'user', content: userMsg });
+    chatHistory.push({ role: 'assistant', content: '', streaming: true });
+    chatStreaming = true;
+    setChatSendDisabled(true);
+    renderChatHistory();
+    scrollChatToBottom();
+
+    try {
+      const messages = chatHistory
+        .slice(0, -1)
+        .map(m => ({ role: m.role, content: m.content }));
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: buildSystemPrompt(),
+          messages,
+          stream: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: { message: `HTTP ${res.status}` } }));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      const last = () => chatHistory[chatHistory.length - 1];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const ev = JSON.parse(data);
+            if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+              last().content += ev.delta.text;
+              updateLastBubble(last().content, true);
+              scrollChatToBottom();
+            }
+          } catch {}
+        }
+      }
+
+      last().streaming = false;
+      updateLastBubble(last().content, false);
+    } catch (err) {
+      const last = chatHistory[chatHistory.length - 1];
+      last.content = `エラー: ${err.message}`;
+      last.streaming = false;
+      last.error = true;
+      updateLastBubble(last.content, false, true);
+    } finally {
+      chatStreaming = false;
+      setChatSendDisabled(false);
+      scrollChatToBottom();
+    }
+  }
+
+  function renderChatHistory() {
+    const container = document.getElementById('chat-messages');
+    if (!chatHistory.length) {
+      container.innerHTML = `<div class="chat-empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:8px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <div>上のボタンから質問するか、<br>自由にメッセージを入力してください</div>
+      </div>`;
+      return;
+    }
+    container.innerHTML = chatHistory.map((m, i) => {
+      const bubbleCls = `chat-bubble${m.streaming ? ' streaming' : ''}${m.error ? ' chat-error' : ''}`;
+      const now = new Date();
+      const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+      return `<div class="chat-msg ${m.role}" data-idx="${i}">
+        <div class="${bubbleCls}">${escHtml(m.content)}</div>
+        ${!m.streaming ? `<div class="chat-time">${time}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function updateLastBubble(content, isStreaming, isError = false) {
+    const container = document.getElementById('chat-messages');
+    const lastEl = container.querySelector('.chat-msg:last-child .chat-bubble');
+    if (!lastEl) return;
+    lastEl.textContent = content;
+    lastEl.className = `chat-bubble${isStreaming ? ' streaming' : ''}${isError ? ' chat-error' : ''}`;
+  }
+
+  function clearChat() {
+    chatHistory = [];
+    const qp = document.getElementById('quick-prompts');
+    if (qp) qp.style.display = '';
+    renderChatHistory();
+  }
+
+  function scrollChatToBottom() {
+    const el = document.getElementById('chat-messages');
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+
+  function setChatSendDisabled(disabled) {
+    const btn = document.getElementById('chat-send-btn');
+    if (btn) btn.disabled = disabled;
+  }
+
+  function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChat();
+    }
+  }
+
   // ── Utilities ─────────────────────────────────────────────────
   function calcTotal(items) {
     return items.reduce((a, b) => ({ kcal: a.kcal+b.kcal, p: a.p+b.p, f: a.f+b.f, c: a.c+b.c }), {kcal:0,p:0,f:0,c:0});
@@ -676,5 +916,8 @@ const App = (() => {
     registerFood, deleteFood,
     deleteMeal,
     setTrendPeriod,
+    toggleApikeyCard, saveApiKey,
+    sendChat, sendQuick, clearChat,
+    autoResizeTextarea, handleChatKey,
   };
 })();

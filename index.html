@@ -52,6 +52,60 @@
 
       <!-- Meal list by timing -->
       <div id="today-meal-list"></div>
+
+      <!-- ===== AI Chat ===== -->
+      <div id="ai-chat-section">
+        <!-- API Key setting -->
+        <div class="card" id="apikey-card">
+          <div class="flex-between" style="cursor:pointer" onclick="App.toggleApikeyCard()">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              <span style="font-size:13px;font-weight:600">Anthropic APIキー</span>
+            </div>
+            <span id="apikey-status" style="font-size:11px"></span>
+          </div>
+          <div id="apikey-input-area" style="margin-top:12px;display:none">
+            <div style="display:flex;gap:8px">
+              <input type="password" id="apikey-input" placeholder="sk-ant-..." style="flex:1">
+              <button class="btn btn-primary btn-sm" onclick="App.saveApiKey()">保存</button>
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-top:6px">キーはlocalStorageに保存されます。他人と共有しないでください。</div>
+          </div>
+        </div>
+
+        <!-- Chat container -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="chat-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <span>AI栄養アドバイザー</span>
+            <button class="chat-clear-btn" onclick="App.clearChat()">履歴をクリア</button>
+          </div>
+
+          <!-- Quick prompts -->
+          <div class="quick-prompts" id="quick-prompts">
+            <button class="quick-btn" onclick="App.sendQuick('今日の食事全体を評価して、目標達成度と気になる点を教えて')">今日の食事を評価</button>
+            <button class="quick-btn" onclick="App.sendQuick('今日の栄養バランスの問題点と改善策を具体的に教えて')">改善策を教えて</button>
+            <button class="quick-btn" onclick="App.sendQuick('目標に足りていない栄養素を補うための食品や食事メニューを提案して')">不足栄養の補い方</button>
+            <button class="quick-btn" onclick="App.sendQuick('今日食べた食品の中で、より栄養効率が良い代替品があれば教えて')">食品の代替案</button>
+          </div>
+
+          <!-- Messages -->
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:8px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              <div>上のボタンから質問するか、<br>自由にメッセージを入力してください</div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div class="chat-input-area">
+            <textarea id="chat-input" placeholder="栄養について質問する..." rows="1" oninput="App.autoResizeTextarea(this)" onkeydown="App.handleChatKey(event)"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn" onclick="App.sendChat()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== TAB: 料理 ===== -->
