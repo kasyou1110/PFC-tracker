@@ -1,677 +1,382 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>PFC Tracker</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PFC">
-<meta name="theme-color" content="#0e0e0e">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  background: #0e0e0e; color: #f0f0f0;
-  min-height: 100vh; padding: 28px 16px 80px;
-}
-h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 24px; }
-.tabs { display: flex; gap: 4px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 2px; }
-.tab {
-  flex-shrink: 0; padding: 7px 12px;
-  background: #141414; border: 1px solid #1e1e1e; border-radius: 20px;
-  font-size: 11px; font-weight: 600; color: #aaa; cursor: pointer; transition: all 0.15s; white-space: nowrap;
-}
-.tab.active { background: #f0f0f0; border-color: #f0f0f0; color: #0e0e0e; }
-.panel { display: none; }
-.panel.active { display: block; }
-.card { background: #141414; border: 1px solid #1e1e1e; border-radius: 14px; padding: 16px; margin-bottom: 10px; }
-.card-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; margin-bottom: 14px; }
-.field { margin-bottom: 10px; }
-.field label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #aaa; margin-bottom: 5px; }
-input[type=text], input[type=number], input[type=date], textarea, select {
-  width: 100%; background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px;
-  color: #f0f0f0; font-size: 14px; padding: 9px 12px; outline: none; font-family: inherit;
-}
-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
-select option { background: #1e1e1e; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
-.btn {
-  width: 100%; padding: 12px; background: #f0f0f0; border: none; border-radius: 10px;
-  font-size: 14px; font-weight: 700; color: #0e0e0e; cursor: pointer; transition: opacity 0.15s; margin-top: 10px;
-}
-.btn:active { opacity: 0.7; }
-.btn-sm {
-  padding: 6px 12px; font-size: 12px; font-weight: 600;
-  background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px;
-  color: #f0f0f0; cursor: pointer; transition: opacity 0.15s;
-}
-.btn-sm:active { opacity: 0.6; }
-.btn-danger { background: #2a0a0a; border-color: #4a1a1a; color: #ff6b6b; }
-.btn-green { background: #1e3a1e; border: 1px solid #2a5a2a; color: #6bffb8; }
-.kcal-big { text-align: center; padding: 20px 0 14px; }
-.kcal-num { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
-.kcal-label { font-size: 12px; color: #aaa; margin-top: 4px; }
-.kcal-surplus { color: #ff6b6b; }
-.kcal-deficit { color: #6bffb8; }
-.kcal-ok { color: #f0f0f0; }
-.pfc-bars { margin: 12px 0; }
-.pfc-bar-row { margin-bottom: 10px; }
-.pfc-bar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
-.pfc-bar-name { font-size: 11px; font-weight: 600; color: #aaa; }
-.pfc-bar-val { font-size: 12px; color: #f0f0f0; }
-.pfc-bar-track { height: 6px; background: #1e1e1e; border-radius: 3px; overflow: hidden; }
-.pfc-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
-.bar-p { background: #4488aa; }
-.bar-f { background: #a07030; }
-.bar-c { background: #6b88ff; }
-.goal-row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
-.goal-row:last-child { border-bottom: none; }
-.goal-name { color: #aaa; }
-.goal-remain { font-weight: 600; }
-.remain-ok { color: #6bffb8; }
-.remain-over { color: #ff6b6b; }
-.meal-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #1a1a1a; }
-.meal-row:last-child { border-bottom: none; }
-.meal-info { flex: 1; }
-.meal-name { font-size: 13px; font-weight: 600; color: #f0f0f0; }
-.meal-sub { font-size: 11px; color: #888; margin-top: 2px; }
-.food-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #1a1a1a; }
-.food-row:last-child { border-bottom: none; }
-.food-name { font-size: 13px; font-weight: 600; flex: 1; color: #f0f0f0; }
-.food-macros { font-size: 10px; color: #888; }
-.search-result { background: #1a1a1a; border-radius: 10px; padding: 16px; margin-bottom: 8px; }
-.result-name { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
-.macro-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
-.macro-box { background: #0e0e0e; border-radius: 8px; padding: 10px 4px; }
-.macro-box-val { font-size: 18px; font-weight: 700; }
-.macro-box-label { font-size: 9px; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
-.val-kcal { color: #f0f0f0; }
-.val-p { color: #4488aa; }
-.val-f { color: #a07030; }
-.val-c { color: #6b88ff; }
-.recipe-ingredient-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-.recipe-ingredient-row select { flex: 2; }
-.recipe-ingredient-row input { flex: 1; }
-.recipe-total { background: #1a1a1a; border-radius: 10px; padding: 16px; margin-top: 12px; }
-.recipe-total-title { font-size: 11px; color: #aaa; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
-.subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
-.subtab { flex: 1; padding: 7px 0; background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px; font-size: 12px; font-weight: 600; color: #888; cursor: pointer; text-align: center; }
-.subtab.active { background: #2a2a2a; border-color: #444; color: #f0f0f0; }
-.subpanel { display: none; }
-.subpanel.active { display: block; }
-.recipe-saved-row { padding: 12px 0; border-bottom: 1px solid #1a1a1a; }
-.recipe-saved-row:last-child { border-bottom: none; }
-.recipe-saved-name { font-size: 14px; font-weight: 600; color: #f0f0f0; margin-bottom: 4px; }
-.recipe-saved-sub { font-size: 11px; color: #888; }
-.recipe-saved-ingredients { margin-top: 8px; }
-.ingredient-tag { display: inline-block; font-size: 10px; background: #1e1e1e; border-radius: 6px; padding: 3px 8px; margin: 2px; color: #aaa; }
-.chart-wrap { background: #141414; border: 1px solid #1e1e1e; border-radius: 14px; padding: 16px; margin-bottom: 10px; }
-.chart-wrap canvas { max-height: 200px; }
-.csel-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.csel { padding: 5px 12px; background: #141414; border: 1px solid #1e1e1e; border-radius: 20px; font-size: 11px; font-weight: 600; color: #aaa; cursor: pointer; transition: all 0.15s; }
-.csel.active { background: #f0f0f0; border-color: #f0f0f0; color: #0e0e0e; }
-.no-data { text-align: center; color: #555; font-size: 13px; padding: 30px 0; }
-.toast {
-  position: fixed; bottom: 30px; left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: #f0f0f0; color: #0e0e0e; font-size: 13px; font-weight: 600;
-  padding: 10px 20px; border-radius: 20px; opacity: 0; transition: all 0.3s;
-  pointer-events: none; white-space: nowrap; z-index: 99;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0e0e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PFCトラッカー</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>PFC Tracker</h1>
+<div id="app">
+  <!-- Content Area -->
+  <div id="content">
 
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('dash')">今日の食事</div>
-  <div class="tab" onclick="switchTab('recipe')">料理</div>
-  <div class="tab" onclick="switchTab('record')">単体記録</div>
-  <div class="tab" onclick="switchTab('search')">検索</div>
-  <div class="tab" onclick="switchTab('foods')">食品登録</div>
-  <div class="tab" onclick="switchTab('graph')">栄養推移</div>
-</div>
+    <!-- ===== TAB: 今日の食事 ===== -->
+    <div class="tab-panel active" id="panel-today">
+      <div class="page-title">今日の食事</div>
 
-<!-- 今日の食事 -->
-<div class="panel active" id="panel-dash">
-  <div class="card">
-    <div class="kcal-big">
-      <div class="kcal-num" id="dash-kcal">0</div>
-      <div class="kcal-label">kcal 摂取 / 目標 2700 kcal</div>
-    </div>
-    <div class="pfc-bars">
-      <div class="pfc-bar-row">
-        <div class="pfc-bar-header"><span class="pfc-bar-name">P タンパク質</span><span class="pfc-bar-val" id="bar-label-p">0 / 178g</span></div>
-        <div class="pfc-bar-track"><div class="pfc-bar-fill bar-p" id="bar-p" style="width:0%"></div></div>
-      </div>
-      <div class="pfc-bar-row">
-        <div class="pfc-bar-header"><span class="pfc-bar-name">F 脂質</span><span class="pfc-bar-val" id="bar-label-f">0 / 75g</span></div>
-        <div class="pfc-bar-track"><div class="pfc-bar-fill bar-f" id="bar-f" style="width:0%"></div></div>
-      </div>
-      <div class="pfc-bar-row">
-        <div class="pfc-bar-header"><span class="pfc-bar-name">C 炭水化物</span><span class="pfc-bar-val" id="bar-label-c">0 / 328g</span></div>
-        <div class="pfc-bar-track"><div class="pfc-bar-fill bar-c" id="bar-c" style="width:0%"></div></div>
-      </div>
-    </div>
-    <div id="remain-list"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">今日の食事一覧</div>
-    <div id="dash-meals"><div class="no-data">まだ記録がありません</div></div>
-  </div>
-</div>
-
-<!-- 料理 -->
-<div class="panel" id="panel-recipe">
-  <div class="subtabs">
-    <div class="subtab active" onclick="switchSubtab('recipe-calc', this)">計算・登録</div>
-    <div class="subtab" onclick="switchSubtab('recipe-saved', this)">保存した料理</div>
-  </div>
-
-  <div class="subpanel active" id="subpanel-recipe-calc">
-    <div class="card">
-      <div class="card-title">料理を作る</div>
-      <div class="field">
-        <label>料理名</label>
-        <input type="text" id="recipe-name" placeholder="例: 味噌汁">
-      </div>
-      <div id="recipe-ingredients"></div>
-      <button class="btn-sm" onclick="addIngredient()" style="width:100%;margin-top:8px">＋ 食材を追加</button>
-      <div id="recipe-total" style="display:none" class="recipe-total">
-        <div class="recipe-total-title" id="recipe-total-name">合計</div>
-        <div class="macro-grid">
-          <div class="macro-box"><div class="macro-box-val val-kcal" id="rt-kcal">0</div><div class="macro-box-label">kcal</div></div>
-          <div class="macro-box"><div class="macro-box-val val-p" id="rt-p">0g</div><div class="macro-box-label">タンパク質</div></div>
-          <div class="macro-box"><div class="macro-box-val val-f" id="rt-f">0g</div><div class="macro-box-label">脂質</div></div>
-          <div class="macro-box"><div class="macro-box-val val-c" id="rt-c">0g</div><div class="macro-box-label">炭水化物</div></div>
+      <!-- Kcal summary -->
+      <div class="card">
+        <div class="kcal-display">
+          <div class="current text-kcal" id="today-kcal">0</div>
+          <div class="target">/ 2700 kcal</div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:12px">
+          <div class="progress-fill" id="kcal-bar" style="background:var(--accent4);width:0%"></div>
+        </div>
+        <div class="pfc-grid">
+          <div class="pfc-item">
+            <div class="label text-p">タンパク質</div>
+            <div class="value text-p" id="today-p">0g</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" id="p-bar" style="background:var(--p-color);width:0%"></div></div>
+            <div class="goal">/ 178g</div>
+          </div>
+          <div class="pfc-item">
+            <div class="label text-f">脂質</div>
+            <div class="value text-f" id="today-f">0g</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" id="f-bar" style="background:var(--f-color);width:0%"></div></div>
+            <div class="goal">/ 75g</div>
+          </div>
+          <div class="pfc-item">
+            <div class="label text-c">炭水化物</div>
+            <div class="value text-c" id="today-c">0g</div>
+            <div class="progress-bar" style="margin:4px 0"><div class="progress-fill" id="c-bar" style="background:var(--c-color);width:0%"></div></div>
+            <div class="goal">/ 328g</div>
+          </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn" onclick="calcRecipe()" style="flex:1;margin-top:0">計算する</button>
-        <button class="btn btn-green" id="btn-save-recipe" onclick="saveRecipe()" style="flex:1;margin-top:0;display:none">料理を保存</button>
+
+      <!-- Meal list by timing -->
+      <div id="today-meal-list"></div>
+
+      <!-- ===== AI Chat ===== -->
+      <div id="ai-chat-section">
+        <!-- API Key setting -->
+        <div class="card" id="apikey-card">
+          <div class="flex-between" style="cursor:pointer" onclick="App.toggleApikeyCard()">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              <span style="font-size:13px;font-weight:600">Anthropic APIキー</span>
+            </div>
+            <span id="apikey-status" style="font-size:11px"></span>
+          </div>
+          <div id="apikey-input-area" style="margin-top:12px;display:none">
+            <div style="display:flex;gap:8px">
+              <input type="password" id="apikey-input" placeholder="sk-ant-..." style="flex:1">
+              <button class="btn btn-primary btn-sm" onclick="App.saveApiKey()">保存</button>
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-top:6px">キーはlocalStorageに保存されます。他人と共有しないでください。</div>
+          </div>
+        </div>
+
+        <!-- Chat container -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="chat-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <span>AI栄養アドバイザー</span>
+            <button class="chat-clear-btn" onclick="App.clearChat()">履歴をクリア</button>
+          </div>
+
+          <!-- Quick prompts -->
+          <div class="quick-prompts" id="quick-prompts">
+            <button class="quick-btn" onclick="App.sendQuick('今日の食事全体を評価して、目標達成度と気になる点を教えて')">今日の食事を評価</button>
+            <button class="quick-btn" onclick="App.sendQuick('今日の栄養バランスの問題点と改善策を具体的に教えて')">改善策を教えて</button>
+            <button class="quick-btn" onclick="App.sendQuick('目標に足りていない栄養素を補うための食品や食事メニューを提案して')">不足栄養の補い方</button>
+            <button class="quick-btn" onclick="App.sendQuick('今日食べた食品の中で、より栄養効率が良い代替品があれば教えて')">食品の代替案</button>
+          </div>
+
+          <!-- Messages -->
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:8px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              <div>上のボタンから質問するか、<br>自由にメッセージを入力してください</div>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div class="chat-input-area">
+            <textarea id="chat-input" placeholder="栄養について質問する..." rows="1" oninput="App.autoResizeTextarea(this)" onkeydown="App.handleChatKey(event)"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn" onclick="App.sendChat()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-green" id="btn-add-today" onclick="addRecipeToToday()" style="display:none">今日の食事に登録</button>
     </div>
 
-    <div class="card">
-      <div class="card-title">新しい食品をここで登録（100gあたり）</div>
-      <div class="field"><label>食品名</label><input type="text" id="qf-name" placeholder="例: 大根"></div>
-      <div class="grid4">
-        <div class="field"><label>kcal</label><input type="number" id="qf-kcal" placeholder="18" min="0"></div>
-        <div class="field"><label>P(g)</label><input type="number" id="qf-p" placeholder="0.5" step="0.1" min="0"></div>
-        <div class="field"><label>F(g)</label><input type="number" id="qf-f" placeholder="0.1" step="0.1" min="0"></div>
-        <div class="field"><label>C(g)</label><input type="number" id="qf-c" placeholder="4.1" step="0.1" min="0"></div>
+    <!-- ===== TAB: 料理 ===== -->
+    <div class="tab-panel" id="panel-recipe">
+      <div class="page-title">料理</div>
+
+      <!-- Create recipe -->
+      <div class="card">
+        <div class="card-title">新しい料理を作る</div>
+        <div class="form-group">
+          <label>料理名</label>
+          <input type="text" id="recipe-name" placeholder="例：鶏むね肉の照り焼き">
+        </div>
+        <div class="form-group">
+          <label>食材を追加</label>
+          <div style="display:flex;gap:8px">
+            <select id="recipe-food-select" style="flex:1">
+              <option value="">食品を選択</option>
+            </select>
+            <input type="number" id="recipe-food-gram" placeholder="g" style="width:70px" min="1">
+            <button class="btn btn-secondary btn-sm" onclick="App.addRecipeIngredient()">追加</button>
+          </div>
+        </div>
+        <div id="recipe-ingredient-list" class="ingredient-list"></div>
+        <div class="recipe-pfc-total" id="recipe-total-display">
+          <div class="flex-between" style="margin-bottom:6px">
+            <span style="font-size:13px;color:var(--text2)">合計</span>
+            <span id="recipe-total-kcal" class="text-kcal" style="font-size:16px;font-weight:700">0 kcal</span>
+          </div>
+          <div class="nutrition-row">
+            <div class="nutrition-badge"><div class="n-val text-p" id="recipe-total-p">0g</div><div class="n-lbl">P</div></div>
+            <div class="nutrition-badge"><div class="n-val text-f" id="recipe-total-f">0g</div><div class="n-lbl">F</div></div>
+            <div class="nutrition-badge"><div class="n-val text-c" id="recipe-total-c">0g</div><div class="n-lbl">C</div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="App.saveRecipe()">料理を保存</button>
+          <button class="btn btn-secondary" onclick="App.addRecipeToToday()">今日に追加</button>
+        </div>
       </div>
-      <button class="btn" onclick="quickSaveFood()">食品を登録して食材に追加</button>
-    </div>
-  </div>
 
-  <div class="subpanel" id="subpanel-recipe-saved">
-    <div class="card">
-      <div class="card-title">保存した料理を検索</div>
-      <input type="text" id="recipe-search-q" placeholder="料理名で検索..." oninput="searchSavedRecipes()">
-      <div id="saved-recipe-list" style="margin-top:12px"><div class="no-data">まだ保存した料理がありません</div></div>
+      <!-- Saved recipes -->
+      <div class="section-title">保存済み料理</div>
+      <div id="saved-recipe-list"></div>
     </div>
-  </div>
-</div>
 
-<!-- 単体記録 -->
-<div class="panel" id="panel-record">
-  <div class="card">
-    <div class="card-title">食品を記録</div>
-    <div class="field"><label>日付</label><input type="date" id="rec-date"></div>
-    <div class="field">
-      <label>食品</label>
-      <select id="rec-food"><option value="">食品を選択...</option></select>
-    </div>
-    <div class="field"><label>グラム数</label><input type="number" id="rec-gram" placeholder="100" min="1"></div>
-    <div id="rec-preview" style="display:none" class="search-result">
-      <div class="macro-grid">
-        <div class="macro-box"><div class="macro-box-val val-kcal" id="rp-kcal">0</div><div class="macro-box-label">kcal</div></div>
-        <div class="macro-box"><div class="macro-box-val val-p" id="rp-p">0g</div><div class="macro-box-label">タンパク質</div></div>
-        <div class="macro-box"><div class="macro-box-val val-f" id="rp-f">0g</div><div class="macro-box-label">脂質</div></div>
-        <div class="macro-box"><div class="macro-box-val val-c" id="rp-c">0g</div><div class="macro-box-label">炭水化物</div></div>
+    <!-- ===== TAB: 単体記録 ===== -->
+    <div class="tab-panel" id="panel-single">
+      <div class="page-title">単体記録</div>
+      <div class="card">
+        <div class="form-group">
+          <label>食品</label>
+          <select id="single-food-select">
+            <option value="">食品を選択してください</option>
+          </select>
+        </div>
+        <div id="single-food-info" style="display:none" class="card" style="background:var(--bg3);margin-bottom:12px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">100gあたり</div>
+          <div class="nutrition-row">
+            <div class="nutrition-badge"><div class="n-val text-kcal" id="si-kcal">0</div><div class="n-lbl">kcal</div></div>
+            <div class="nutrition-badge"><div class="n-val text-p" id="si-p">0g</div><div class="n-lbl">P</div></div>
+            <div class="nutrition-badge"><div class="n-val text-f" id="si-f">0g</div><div class="n-lbl">F</div></div>
+            <div class="nutrition-badge"><div class="n-val text-c" id="si-c">0g</div><div class="n-lbl">C</div></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>グラム数</label>
+          <input type="number" id="single-gram" placeholder="100" min="1" oninput="App.updateSingleCalc()">
+        </div>
+        <div id="single-calc-display" style="display:none" class="card" style="background:var(--bg3);margin-bottom:12px">
+          <div class="flex-between" style="margin-bottom:6px">
+            <span style="font-size:13px;color:var(--text2)">摂取量</span>
+            <span id="single-calc-kcal" class="text-kcal" style="font-size:16px;font-weight:700">0 kcal</span>
+          </div>
+          <div class="nutrition-row">
+            <div class="nutrition-badge"><div class="n-val text-p" id="single-calc-p">0g</div><div class="n-lbl">P</div></div>
+            <div class="nutrition-badge"><div class="n-val text-f" id="single-calc-f">0g</div><div class="n-lbl">F</div></div>
+            <div class="nutrition-badge"><div class="n-val text-c" id="single-calc-c">0g</div><div class="n-lbl">C</div></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>食事タイミング</label>
+          <div class="timing-chips" id="single-timing-chips">
+            <div class="timing-chip active" data-val="朝食" onclick="App.selectTiming(this)">朝食</div>
+            <div class="timing-chip" data-val="昼食" onclick="App.selectTiming(this)">昼食</div>
+            <div class="timing-chip" data-val="夕食" onclick="App.selectTiming(this)">夕食</div>
+            <div class="timing-chip" data-val="間食" onclick="App.selectTiming(this)">間食</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="App.recordSingle()">記録する</button>
       </div>
     </div>
-    <button class="btn" onclick="saveRecord()">記録する</button>
-  </div>
-  <div class="card">
-    <div class="card-title">今日の記録一覧</div>
-    <div id="rec-list"><div class="no-data">まだ記録がありません</div></div>
-  </div>
-</div>
 
-<!-- 検索 -->
-<div class="panel" id="panel-search">
-  <div class="subtabs">
-    <div class="subtab active" onclick="switchSubtab('search-food', this)">食品検索</div>
-    <div class="subtab" onclick="switchSubtab('search-recipe', this)">料理検索</div>
-  </div>
-  <div class="subpanel active" id="subpanel-search-food">
-    <div class="card">
-      <div class="card-title">食品を検索</div>
-      <div class="field"><label>食品名</label><input type="text" id="search-q" placeholder="例: 鶏むね肉" oninput="liveSearch()"></div>
-      <div class="field"><label>グラム数</label><input type="number" id="search-gram" placeholder="100" min="1" oninput="liveSearch()"></div>
-      <div id="search-result"></div>
+    <!-- ===== TAB: 検索 ===== -->
+    <div class="tab-panel" id="panel-search">
+      <div class="page-title">検索</div>
+      <div class="sub-tabs">
+        <button class="sub-tab-btn active" onclick="App.switchSubTab('search','food',this)">食品</button>
+        <button class="sub-tab-btn" onclick="App.switchSubTab('search','recipe',this)">料理</button>
+      </div>
+
+      <!-- Food search -->
+      <div id="search-food-panel">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="food-search-input" placeholder="食品名で検索..." oninput="App.searchFoods()">
+        </div>
+        <div id="food-search-results"></div>
+      </div>
+
+      <!-- Recipe search -->
+      <div id="search-recipe-panel" style="display:none">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="recipe-search-input" placeholder="料理名で検索..." oninput="App.searchRecipes()">
+        </div>
+        <div id="recipe-search-results"></div>
+      </div>
     </div>
-  </div>
-  <div class="subpanel" id="subpanel-search-recipe">
-    <div class="card">
-      <div class="card-title">料理を検索</div>
-      <input type="text" id="recipe-search-q2" placeholder="料理名で検索..." oninput="searchSavedRecipes2()">
-      <div id="saved-recipe-list2" style="margin-top:12px"><div class="no-data">まだ保存した料理がありません</div></div>
+
+    <!-- ===== TAB: 食品登録 ===== -->
+    <div class="tab-panel" id="panel-register">
+      <div class="page-title">食品登録</div>
+      <div class="card">
+        <div class="card-title">新しい食品を登録</div>
+        <div class="form-group">
+          <label>食品名</label>
+          <input type="text" id="reg-name" placeholder="例：鶏むね肉（皮なし）">
+        </div>
+        <div class="form-group">
+          <label>100gあたりの栄養素</label>
+          <div class="form-row">
+            <div>
+              <label style="color:var(--accent4)">カロリー (kcal)</label>
+              <input type="number" id="reg-kcal" placeholder="0" min="0" step="0.1">
+            </div>
+            <div>
+              <label style="color:var(--p-color)">タンパク質 (g)</label>
+              <input type="number" id="reg-p" placeholder="0" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:8px">
+            <div>
+              <label style="color:var(--f-color)">脂質 (g)</label>
+              <input type="number" id="reg-f" placeholder="0" min="0" step="0.1">
+            </div>
+            <div>
+              <label style="color:var(--c-color)">炭水化物 (g)</label>
+              <input type="number" id="reg-c" placeholder="0" min="0" step="0.1">
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="App.registerFood()">登録する</button>
+      </div>
+
+      <!-- Registered foods list -->
+      <div class="section-title" style="margin-top:4px">登録済み食品</div>
+      <div id="food-master-list"></div>
     </div>
-  </div>
-</div>
 
-<!-- 食品登録 -->
-<div class="panel" id="panel-foods">
-  <div class="card">
-    <div class="card-title">食品を登録（100gあたり）</div>
-    <div class="field"><label>食品名</label><input type="text" id="food-name" placeholder="例: 鶏むね肉"></div>
-    <div class="grid4">
-      <div class="field"><label>kcal</label><input type="number" id="food-kcal" placeholder="108" min="0"></div>
-      <div class="field"><label>P(g)</label><input type="number" id="food-p" placeholder="22.3" step="0.1" min="0"></div>
-      <div class="field"><label>F(g)</label><input type="number" id="food-f" placeholder="1.5" step="0.1" min="0"></div>
-      <div class="field"><label>C(g)</label><input type="number" id="food-c" placeholder="0" step="0.1" min="0"></div>
+    <!-- ===== TAB: 栄養推移 ===== -->
+    <div class="tab-panel" id="panel-trend">
+      <div class="page-title">栄養推移</div>
+      <div class="period-btns">
+        <button class="period-btn active" onclick="App.setTrendPeriod(7, this)">7日</button>
+        <button class="period-btn" onclick="App.setTrendPeriod(14, this)">14日</button>
+        <button class="period-btn" onclick="App.setTrendPeriod(30, this)">30日</button>
+      </div>
+      <div class="card">
+        <div class="card-title">カロリー</div>
+        <div id="trend-kcal-wrap" style="position:relative;height:160px"><canvas id="trend-kcal-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">PFC</div>
+        <div id="trend-pfc-wrap" style="position:relative;height:200px"><canvas id="trend-pfc-chart"></canvas></div>
+      </div>
+      <div class="card" id="trend-avg-card">
+        <div class="card-title">期間平均</div>
+        <div class="flex-between" style="margin-bottom:8px">
+          <span style="color:var(--text2)">カロリー</span>
+          <span class="text-kcal font-bold" id="avg-kcal">- kcal</span>
+        </div>
+        <div class="pfc-grid">
+          <div class="pfc-item"><div class="label text-p">P</div><div class="value text-p" id="avg-p">-</div></div>
+          <div class="pfc-item"><div class="label text-f">F</div><div class="value text-f" id="avg-f">-</div></div>
+          <div class="pfc-item"><div class="label text-c">C</div><div class="value text-c" id="avg-c">-</div></div>
+        </div>
+      </div>
     </div>
-    <button class="btn" onclick="saveFood()">登録</button>
-  </div>
-  <div class="card">
-    <div class="card-title">登録済み食品</div>
-    <div id="food-list"><div class="no-data">まだ登録がありません</div></div>
+
+  </div><!-- /content -->
+
+  <!-- Tab bar -->
+  <nav id="tab-bar">
+    <button class="tab-btn active" onclick="App.switchTab('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      今日
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('recipe',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      料理
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('single',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      単体
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('search',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      検索
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('register',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      登録
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('trend',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      推移
+    </button>
+  </nav>
+</div>
+
+<!-- Add to today modal (from search/recipe) -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <button class="modal-close" onclick="App.closeModal()">×</button>
+      今日の食事に追加
+    </div>
+    <div id="modal-food-info" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>グラム数</label>
+      <input type="number" id="modal-gram" placeholder="100" min="1" oninput="App.updateModalCalc()">
+    </div>
+    <div id="modal-calc-display" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>食事タイミング</label>
+      <div class="timing-chips" id="modal-timing-chips">
+        <div class="timing-chip active" data-val="朝食" onclick="App.selectModalTiming(this)">朝食</div>
+        <div class="timing-chip" data-val="昼食" onclick="App.selectModalTiming(this)">昼食</div>
+        <div class="timing-chip" data-val="夕食" onclick="App.selectModalTiming(this)">夕食</div>
+        <div class="timing-chip" data-val="間食" onclick="App.selectModalTiming(this)">間食</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="App.confirmAddToToday()">追加する</button>
   </div>
 </div>
 
-<!-- 栄養推移 -->
-<div class="panel" id="panel-graph">
-  <div class="csel-row">
-    <div class="csel active" onclick="selectGraph('kcal',this)">kcal</div>
-    <div class="csel" onclick="selectGraph('p',this)">タンパク質</div>
-    <div class="csel" onclick="selectGraph('f',this)">脂質</div>
-    <div class="csel" onclick="selectGraph('c',this)">炭水化物</div>
-  </div>
-  <div class="chart-wrap">
-    <canvas id="graph-canvas"></canvas>
-    <div class="no-data" id="graph-nodata" style="display:none">まだデータがありません</div>
+<!-- Recipe add-to-today modal -->
+<div class="modal-overlay" id="recipe-add-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <button class="modal-close" onclick="App.closeRecipeModal()">×</button>
+      料理を今日に追加
+    </div>
+    <div id="recipe-modal-info" style="margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>食事タイミング</label>
+      <div class="timing-chips" id="recipe-modal-timing-chips">
+        <div class="timing-chip active" data-val="朝食" onclick="App.selectRecipeModalTiming(this)">朝食</div>
+        <div class="timing-chip" data-val="昼食" onclick="App.selectModalTiming(this)">昼食</div>
+        <div class="timing-chip" data-val="夕食" onclick="App.selectRecipeModalTiming(this)">夕食</div>
+        <div class="timing-chip" data-val="間食" onclick="App.selectRecipeModalTiming(this)">間食</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="App.confirmAddRecipeToToday()">追加する</button>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toast"></div>
 
-<script>
-const GOALS = { kcal: 2700, p: 178, f: 75, c: 328 };
-let foods = [], records = [], savedRecipes = [], graphChart = null, currentGraph = 'kcal';
-try { foods = JSON.parse(localStorage.getItem('pfc_foods') || '[]'); } catch(e) {}
-try { records = JSON.parse(localStorage.getItem('pfc_records') || '[]'); } catch(e) {}
-try { savedRecipes = JSON.parse(localStorage.getItem('pfc_recipes') || '[]'); } catch(e) {}
-
-function saveData() {
-  localStorage.setItem('pfc_foods', JSON.stringify(foods));
-  localStorage.setItem('pfc_records', JSON.stringify(records));
-  localStorage.setItem('pfc_recipes', JSON.stringify(savedRecipes));
-}
-function today() {
-  const d = new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-// --- Tabs ---
-function switchTab(name) {
-  const tabs = ['dash','recipe','record','search','foods','graph'];
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', tabs[i] === name));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-  if (name === 'dash') renderDash();
-  if (name === 'record') { renderRecList(); updateFoodSelects(); }
-  if (name === 'graph') renderGraph(currentGraph);
-  if (name === 'foods') renderFoodList();
-  if (name === 'recipe') { updateFoodSelects(); if (!document.querySelectorAll('.recipe-ingredient-row').length) addIngredient(); }
-  if (name === 'search') renderSavedRecipes2();
-}
-
-function switchSubtab(name, el) {
-  const parent = el.closest('.panel, .subpanel-group') || el.parentElement.parentElement;
-  el.parentElement.querySelectorAll('.subtab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  parent.querySelectorAll('.subpanel').forEach(p => p.classList.remove('active'));
-  document.getElementById('subpanel-'+name).classList.add('active');
-  if (name === 'recipe-saved') renderSavedRecipes();
-  if (name === 'search-recipe') renderSavedRecipes2();
-}
-
-// --- Food master ---
-function saveFood() {
-  const name = document.getElementById('food-name').value.trim();
-  const kcal = parseFloat(document.getElementById('food-kcal').value);
-  const p = parseFloat(document.getElementById('food-p').value);
-  const f = parseFloat(document.getElementById('food-f').value);
-  const c = parseFloat(document.getElementById('food-c').value);
-  if (!name || isNaN(kcal) || isNaN(p) || isNaN(f) || isNaN(c)) { toast('全項目入力してください'); return; }
-  const existing = foods.findIndex(fd => fd.name === name);
-  if (existing >= 0) foods[existing] = {name,kcal,p,f,c}; else foods.push({name,kcal,p,f,c});
-  foods.sort((a,b) => a.name.localeCompare(b.name,'ja'));
-  saveData();
-  ['food-name','food-kcal','food-p','food-f','food-c'].forEach(id => document.getElementById(id).value='');
-  renderFoodList(); updateFoodSelects(); toast('登録しました');
-}
-
-function quickSaveFood() {
-  const name = document.getElementById('qf-name').value.trim();
-  const kcal = parseFloat(document.getElementById('qf-kcal').value);
-  const p = parseFloat(document.getElementById('qf-p').value);
-  const f = parseFloat(document.getElementById('qf-f').value);
-  const c = parseFloat(document.getElementById('qf-c').value);
-  if (!name || isNaN(kcal) || isNaN(p) || isNaN(f) || isNaN(c)) { toast('全項目入力してください'); return; }
-  const existing = foods.findIndex(fd => fd.name === name);
-  if (existing >= 0) foods[existing] = {name,kcal,p,f,c}; else foods.push({name,kcal,p,f,c});
-  foods.sort((a,b) => a.name.localeCompare(b.name,'ja'));
-  saveData(); updateFoodSelects();
-  ['qf-name','qf-kcal','qf-p','qf-f','qf-c'].forEach(id => document.getElementById(id).value='');
-  addIngredient(); toast(name+'を登録しました');
-}
-
-function deleteFood(name) {
-  foods = foods.filter(f => f.name !== name);
-  saveData(); renderFoodList(); updateFoodSelects(); toast('削除しました');
-}
-
-function renderFoodList() {
-  const el = document.getElementById('food-list');
-  if (!foods.length) { el.innerHTML = '<div class="no-data">まだ登録がありません</div>'; return; }
-  el.innerHTML = foods.map(f =>
-    '<div class="food-row"><div><div class="food-name">'+f.name+'</div>'
-    +'<div class="food-macros">'+f.kcal+'kcal / P'+f.p+'g F'+f.f+'g C'+f.c+'g（100gあたり）</div></div>'
-    +'<button class="btn-sm btn-danger" onclick="deleteFood(\''+f.name+'\')">削除</button></div>'
-  ).join('');
-}
-
-function updateFoodSelects() {
-  const opts = '<option value="">食品を選択...</option>'+foods.map(f=>'<option value="'+f.name+'">'+f.name+'</option>').join('');
-  document.querySelectorAll('.food-select').forEach(s => { const v=s.value; s.innerHTML=opts; s.value=v; });
-  const rs = document.getElementById('rec-food');
-  if (rs) rs.innerHTML = opts;
-}
-
-// --- Record ---
-document.addEventListener('change', e => { if(e.target.id==='rec-food'||e.target.id==='rec-gram') updateRecPreview(); });
-document.addEventListener('input', e => { if(e.target.id==='rec-gram') updateRecPreview(); });
-
-function updateRecPreview() {
-  const food = foods.find(f => f.name === document.getElementById('rec-food').value);
-  const gram = parseFloat(document.getElementById('rec-gram').value);
-  const prev = document.getElementById('rec-preview');
-  if (!food || !gram) { prev.style.display='none'; return; }
-  const r = gram/100;
-  prev.style.display='block';
-  document.getElementById('rp-kcal').textContent = Math.round(food.kcal*r);
-  document.getElementById('rp-p').textContent = (food.p*r).toFixed(1)+'g';
-  document.getElementById('rp-f').textContent = (food.f*r).toFixed(1)+'g';
-  document.getElementById('rp-c').textContent = (food.c*r).toFixed(1)+'g';
-}
-
-function saveRecord() {
-  const date = document.getElementById('rec-date').value;
-  const foodName = document.getElementById('rec-food').value;
-  const gram = parseFloat(document.getElementById('rec-gram').value);
-  const food = foods.find(f => f.name === foodName);
-  if (!date || !food || !gram) { toast('全項目入力してください'); return; }
-  const r = gram/100;
-  records.push({ id:Date.now(), date, name:food.name, gram,
-    kcal:Math.round(food.kcal*r), p:parseFloat((food.p*r).toFixed(1)),
-    f:parseFloat((food.f*r).toFixed(1)), c:parseFloat((food.c*r).toFixed(1)) });
-  saveData();
-  document.getElementById('rec-food').value='';
-  document.getElementById('rec-gram').value='';
-  document.getElementById('rec-preview').style.display='none';
-  renderRecList(); toast('記録しました');
-}
-
-function deleteRecord(id) {
-  records = records.filter(r => r.id !== id);
-  saveData(); renderRecList(); renderDash();
-}
-
-function renderRecList() {
-  const el = document.getElementById('rec-list');
-  const date = document.getElementById('rec-date').value || today();
-  const recs = records.filter(r => r.date === date);
-  if (!recs.length) { el.innerHTML='<div class="no-data">まだ記録がありません</div>'; return; }
-  el.innerHTML = recs.map(r =>
-    '<div class="meal-row"><div class="meal-info">'
-    +'<div class="meal-name">'+r.name+(r.gram?' '+r.gram+'g':'')+'</div>'
-    +'<div class="meal-sub">'+r.kcal+'kcal P'+r.p+'g F'+r.f+'g C'+r.c+'g</div>'
-    +'</div><button class="btn-sm btn-danger" onclick="deleteRecord('+r.id+')">×</button></div>'
-  ).join('');
-}
-
-// --- Dashboard ---
-function getTodayTotals() {
-  return records.filter(r => r.date === today()).reduce((acc,r) => {
-    acc.kcal+=r.kcal; acc.p+=r.p; acc.f+=r.f; acc.c+=r.c; return acc;
-  }, {kcal:0,p:0,f:0,c:0});
-}
-
-function renderDash() {
-  const t = getTodayTotals();
-  t.p=parseFloat(t.p.toFixed(1)); t.f=parseFloat(t.f.toFixed(1)); t.c=parseFloat(t.c.toFixed(1));
-  const kcalEl = document.getElementById('dash-kcal');
-  kcalEl.textContent = t.kcal;
-  const diff = t.kcal - GOALS.kcal;
-  kcalEl.className = 'kcal-num '+(diff>100?'kcal-surplus':diff<-100?'kcal-deficit':'kcal-ok');
-  const pct = (v,g) => Math.min(100, Math.round(v/g*100));
-  document.getElementById('bar-p').style.width = pct(t.p,GOALS.p)+'%';
-  document.getElementById('bar-f').style.width = pct(t.f,GOALS.f)+'%';
-  document.getElementById('bar-c').style.width = pct(t.c,GOALS.c)+'%';
-  document.getElementById('bar-label-p').textContent = t.p+' / '+GOALS.p+'g';
-  document.getElementById('bar-label-f').textContent = t.f+' / '+GOALS.f+'g';
-  document.getElementById('bar-label-c').textContent = t.c+' / '+GOALS.c+'g';
-  const items = [
-    {name:'kcal',cur:t.kcal,goal:GOALS.kcal,unit:'kcal'},
-    {name:'タンパク質',cur:t.p,goal:GOALS.p,unit:'g'},
-    {name:'脂質',cur:t.f,goal:GOALS.f,unit:'g'},
-    {name:'炭水化物',cur:t.c,goal:GOALS.c,unit:'g'},
-  ];
-  document.getElementById('remain-list').innerHTML = items.map(item => {
-    const rem = parseFloat((item.goal-item.cur).toFixed(1));
-    return '<div class="goal-row"><span class="goal-name">残り '+item.name+'</span>'
-      +'<span class="goal-remain '+(rem<0?'remain-over':'remain-ok')+'">'
-      +(rem<0?'オーバー '+Math.abs(rem)+item.unit:rem+item.unit)+'</span></div>';
-  }).join('');
-  const recs = records.filter(r => r.date === today());
-  const mealsEl = document.getElementById('dash-meals');
-  if (!recs.length) { mealsEl.innerHTML='<div class="no-data">まだ記録がありません</div>'; return; }
-  mealsEl.innerHTML = recs.map(r =>
-    '<div class="meal-row"><div class="meal-info">'
-    +'<div class="meal-name">'+r.name+(r.gram?' '+r.gram+'g':'')+'</div>'
-    +'<div class="meal-sub">'+r.kcal+'kcal P'+r.p+'g F'+r.f+'g C'+r.c+'g</div>'
-    +'</div></div>'
-  ).join('');
-}
-
-// --- Search ---
-function liveSearch() {
-  const q = document.getElementById('search-q').value.trim();
-  const gram = parseFloat(document.getElementById('search-gram').value)||100;
-  const el = document.getElementById('search-result');
-  if (!q) { el.innerHTML=''; return; }
-  const matches = foods.filter(f => f.name.includes(q));
-  if (!matches.length) { el.innerHTML='<div class="no-data">見つかりませんでした</div>'; return; }
-  el.innerHTML = matches.map(food => {
-    const r = gram/100;
-    return '<div class="search-result"><div class="result-name">'+food.name+' '+gram+'g</div>'
-      +'<div class="macro-grid">'
-      +'<div class="macro-box"><div class="macro-box-val val-kcal">'+Math.round(food.kcal*r)+'</div><div class="macro-box-label">kcal</div></div>'
-      +'<div class="macro-box"><div class="macro-box-val val-p">'+((food.p*r).toFixed(1))+'g</div><div class="macro-box-label">タンパク質</div></div>'
-      +'<div class="macro-box"><div class="macro-box-val val-f">'+((food.f*r).toFixed(1))+'g</div><div class="macro-box-label">脂質</div></div>'
-      +'<div class="macro-box"><div class="macro-box-val val-c">'+((food.c*r).toFixed(1))+'g</div><div class="macro-box-label">炭水化物</div></div>'
-      +'</div></div>';
-  }).join('');
-}
-
-// --- Recipe ---
-function addIngredient() {
-  const container = document.getElementById('recipe-ingredients');
-  const row = document.createElement('div');
-  row.className = 'recipe-ingredient-row';
-  const opts = '<option value="">食品を選択...</option>'+foods.map(f=>'<option value="'+f.name+'">'+f.name+'</option>').join('');
-  row.innerHTML = '<select class="food-select">'+opts+'</select>'
-    +'<input type="number" placeholder="g" min="1">'
-    +'<button class="btn-sm btn-danger" onclick="this.parentElement.remove()">×</button>';
-  container.appendChild(row);
-}
-
-function calcRecipe() {
-  const rows = document.querySelectorAll('.recipe-ingredient-row');
-  let total = {kcal:0,p:0,f:0,c:0};
-  rows.forEach(row => {
-    const sel = row.querySelector('select').value;
-    const gram = parseFloat(row.querySelector('input').value);
-    const food = foods.find(f => f.name === sel);
-    if (!food || !gram) return;
-    const r = gram/100;
-    total.kcal += food.kcal*r; total.p += food.p*r; total.f += food.f*r; total.c += food.c*r;
-  });
-  const el = document.getElementById('recipe-total');
-  el.style.display = 'block';
-  const name = document.getElementById('recipe-name').value || 'レシピ';
-  document.getElementById('recipe-total-name').textContent = name+' — 合計';
-  document.getElementById('rt-kcal').textContent = Math.round(total.kcal);
-  document.getElementById('rt-p').textContent = total.p.toFixed(1)+'g';
-  document.getElementById('rt-f').textContent = total.f.toFixed(1)+'g';
-  document.getElementById('rt-c').textContent = total.c.toFixed(1)+'g';
-  document.getElementById('btn-add-today').style.display = 'block';
-  document.getElementById('btn-save-recipe').style.display = 'block';
-}
-
-function addRecipeToToday() {
-  const name = document.getElementById('recipe-name').value || 'レシピ';
-  const kcal = parseInt(document.getElementById('rt-kcal').textContent)||0;
-  const p = parseFloat(document.getElementById('rt-p').textContent)||0;
-  const f = parseFloat(document.getElementById('rt-f').textContent)||0;
-  const c = parseFloat(document.getElementById('rt-c').textContent)||0;
-  if (!kcal && !p && !f && !c) { toast('先に計算してください'); return; }
-  records.push({ id:Date.now(), date:today(), name, gram:null, kcal, p, f, c });
-  saveData(); toast(name+'を今日の食事に登録しました');
-}
-
-function saveRecipe() {
-  const name = document.getElementById('recipe-name').value.trim();
-  if (!name) { toast('料理名を入力してください'); return; }
-  const rows = document.querySelectorAll('.recipe-ingredient-row');
-  const ingredients = [];
-  rows.forEach(row => {
-    const sel = row.querySelector('select').value;
-    const gram = parseFloat(row.querySelector('input').value);
-    if (sel && gram) ingredients.push({name:sel, gram});
-  });
-  if (!ingredients.length) { toast('食材を追加してください'); return; }
-  const kcal = parseInt(document.getElementById('rt-kcal').textContent)||0;
-  const p = parseFloat(document.getElementById('rt-p').textContent)||0;
-  const f = parseFloat(document.getElementById('rt-f').textContent)||0;
-  const c = parseFloat(document.getElementById('rt-c').textContent)||0;
-  const existing = savedRecipes.findIndex(r => r.name === name);
-  const recipe = {name, ingredients, kcal, p, f, c};
-  if (existing >= 0) savedRecipes[existing]=recipe; else savedRecipes.push(recipe);
-  saveData(); toast(name+'を保存しました');
-}
-
-function renderSavedRecipes() {
-  const q = (document.getElementById('recipe-search-q').value||'').trim();
-  renderRecipeList('saved-recipe-list', q);
-}
-
-function searchSavedRecipes() { renderSavedRecipes(); }
-
-function renderSavedRecipes2() {
-  const q = (document.getElementById('recipe-search-q2').value||'').trim();
-  renderRecipeList('saved-recipe-list2', q);
-}
-
-function searchSavedRecipes2() { renderSavedRecipes2(); }
-
-function renderRecipeList(elId, q) {
-  const el = document.getElementById(elId);
-  const list = q ? savedRecipes.filter(r => r.name.includes(q)) : savedRecipes;
-  if (!list.length) { el.innerHTML='<div class="no-data">'+(q?'見つかりませんでした':'まだ保存した料理がありません')+'</div>'; return; }
-  el.innerHTML = list.map(r =>
-    '<div class="recipe-saved-row">'
-    +'<div class="recipe-saved-name">'+r.name+'</div>'
-    +'<div class="recipe-saved-sub">'+r.kcal+'kcal P'+r.p+'g F'+r.f+'g C'+r.c+'g</div>'
-    +'<div class="recipe-saved-ingredients">'
-    +r.ingredients.map(i => '<span class="ingredient-tag">'+i.name+' '+i.gram+'g</span>').join('')
-    +'</div></div>'
-  ).join('');
-}
-
-// --- Graph ---
-function selectGraph(m, el) {
-  document.querySelectorAll('.csel').forEach(e => e.classList.remove('active'));
-  el.classList.add('active'); currentGraph = m; renderGraph(m);
-}
-
-function renderGraph(m) {
-  const byDate = {};
-  records.forEach(r => {
-    if (!byDate[r.date]) byDate[r.date]={kcal:0,p:0,f:0,c:0};
-    byDate[r.date].kcal+=r.kcal; byDate[r.date].p+=r.p; byDate[r.date].f+=r.f; byDate[r.date].c+=r.c;
-  });
-  const dates = Object.keys(byDate).sort();
-  const nodata = document.getElementById('graph-nodata');
-  const canvas = document.getElementById('graph-canvas');
-  if (!dates.length) { canvas.style.display='none'; nodata.style.display='block'; return; }
-  canvas.style.display='block'; nodata.style.display='none';
-  const labels = dates.map(d => d.slice(5).replace('-','/'));
-  const values = dates.map(d => parseFloat(byDate[d][m].toFixed(1)));
-  const colors = {kcal:'#f0f0f0',p:'#4488aa',f:'#a07030',c:'#6b88ff'};
-  const goals = {kcal:GOALS.kcal,p:GOALS.p,f:GOALS.f,c:GOALS.c};
-  const units = {kcal:'kcal',p:'g',f:'g',c:'g'};
-  const names = {kcal:'カロリー',p:'タンパク質',f:'脂質',c:'炭水化物'};
-  if (graphChart) graphChart.destroy();
-  graphChart = new Chart(canvas, {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:names[m], data:values, borderColor:colors[m], backgroundColor:colors[m]+'22',
-        borderWidth:2, pointBackgroundColor:colors[m], pointRadius:4, fill:true, tension:0.3 },
-      { label:'目標', data:labels.map(()=>goals[m]), borderColor:'#444', borderWidth:1,
-        borderDash:[4,4], pointRadius:0, fill:false }
-    ]},
-    options:{
-      responsive:true, maintainAspectRatio:true,
-      plugins:{
-        legend:{display:false},
-        tooltip:{ backgroundColor:'#1e1e1e', titleColor:'#aaa', bodyColor:'#f0f0f0',
-          borderColor:'#333', borderWidth:1,
-          callbacks:{ label: ctx => ctx.datasetIndex===0 ? names[m]+': '+ctx.parsed.y+units[m] : '目標: '+goals[m]+units[m] }
-        }
-      },
-      scales:{
-        x:{ticks:{color:'#aaa',font:{size:10}},grid:{color:'#1a1a1a'},border:{color:'#222'}},
-        y:{ticks:{color:'#aaa',font:{size:10}},grid:{color:'#1a1a1a'},border:{color:'#222'}}
-      }
-    }
-  });
-}
-
-// --- Init ---
-document.getElementById('rec-date').value = today();
-updateFoodSelects();
-renderDash();
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
