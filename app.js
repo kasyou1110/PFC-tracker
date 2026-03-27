@@ -637,13 +637,19 @@ const App = (() => {
   // ── AI Chat ───────────────────────────────────────────────────
   function initChat() {
     const key = store.get('apikey', '');
-    updateApiKeyStatus(key);
+    // 未設定のときだけ自動でAPIキー入力欄を開く
+    if (!key) {
+      document.getElementById('apikey-card').style.display = '';
+      document.getElementById('apikey-gear-btn').classList.add('active');
+    }
   }
 
   function toggleApikeyCard() {
-    const area = document.getElementById('apikey-input-area');
-    const isHidden = area.style.display === 'none' || area.style.display === '';
-    area.style.display = isHidden ? '' : 'none';
+    const card = document.getElementById('apikey-card');
+    const btn  = document.getElementById('apikey-gear-btn');
+    const isHidden = card.style.display === 'none' || card.style.display === '';
+    card.style.display = isHidden ? '' : 'none';
+    btn.classList.toggle('active', isHidden);
     if (isHidden) {
       const key = store.get('apikey', '');
       document.getElementById('apikey-input').value = key;
@@ -658,20 +664,9 @@ const App = (() => {
       return;
     }
     store.set('apikey', key);
-    updateApiKeyStatus(key);
-    document.getElementById('apikey-input-area').style.display = 'none';
+    document.getElementById('apikey-card').style.display = 'none';
+    document.getElementById('apikey-gear-btn').classList.remove('active');
     toast('APIキーを保存しました');
-  }
-
-  function updateApiKeyStatus(key) {
-    const el = document.getElementById('apikey-status');
-    if (key) {
-      el.textContent = '設定済み ✓';
-      el.className = 'ok';
-    } else {
-      el.textContent = '未設定';
-      el.className = 'none';
-    }
   }
 
   function buildSystemPrompt() {

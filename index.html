@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0e0e0e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -55,30 +55,27 @@
 
       <!-- ===== AI Chat ===== -->
       <div id="ai-chat-section">
-        <!-- API Key setting -->
-        <div class="card" id="apikey-card">
-          <div class="flex-between" style="cursor:pointer" onclick="App.toggleApikeyCard()">
-            <div style="display:flex;align-items:center;gap:8px">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-              <span style="font-size:13px;font-weight:600">Anthropic APIキー</span>
-            </div>
-            <span id="apikey-status" style="font-size:11px"></span>
-          </div>
-          <div id="apikey-input-area" style="margin-top:12px;display:none">
-            <div style="display:flex;gap:8px">
-              <input type="password" id="apikey-input" placeholder="sk-ant-..." style="flex:1">
-              <button class="btn btn-primary btn-sm" onclick="App.saveApiKey()">保存</button>
-            </div>
-            <div style="font-size:11px;color:var(--text2);margin-top:6px">キーはlocalStorageに保存されます。他人と共有しないでください。</div>
-          </div>
-        </div>
-
         <!-- Chat container -->
         <div class="card" style="padding:0;overflow:hidden">
           <div class="chat-header">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             <span>AI栄養アドバイザー</span>
             <button class="chat-clear-btn" onclick="App.clearChat()">履歴をクリア</button>
+            <button class="apikey-gear-btn" id="apikey-gear-btn" onclick="App.toggleApikeyCard()" title="APIキー設定">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </button>
+          </div>
+
+          <!-- API Key input (hidden by default, shown when not set or gear clicked) -->
+          <div id="apikey-card" style="display:none">
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:8px">Anthropic APIキー（localStorageに保存）</div>
+              <div style="display:flex;gap:8px">
+                <input type="password" id="apikey-input" placeholder="sk-ant-..." style="flex:1;font-size:16px">
+                <button class="btn btn-primary btn-sm" onclick="App.saveApiKey()">保存</button>
+              </div>
+              <div style="font-size:11px;color:var(--text2);margin-top:6px">他人と共有しないでください</div>
+            </div>
           </div>
 
           <!-- Quick prompts -->

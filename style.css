@@ -73,7 +73,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-input, select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 10px 12px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+input, select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 10px 12px; font-size: 16px; outline: none; transition: border-color 0.2s; }
 input:focus, select:focus { border-color: var(--accent); }
 select option { background: var(--bg3); }
 input::placeholder { color: var(--text2); }
@@ -166,6 +166,9 @@ input::placeholder { color: var(--text2); }
 .chat-header svg { flex-shrink: 0; }
 .chat-clear-btn { margin-left: auto; background: none; border: none; color: var(--text2); font-size: 11px; cursor: pointer; padding: 3px 8px; border-radius: 4px; transition: background 0.15s; }
 .chat-clear-btn:hover { background: var(--bg3); }
+.apikey-gear-btn { background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; transition: color 0.15s; flex-shrink: 0; }
+.apikey-gear-btn:hover { color: var(--text); }
+.apikey-gear-btn.active { color: var(--accent2); }
 
 .quick-prompts { display: flex; gap: 6px; padding: 10px 12px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); }
 .quick-prompts::-webkit-scrollbar { display: none; }
@@ -190,7 +193,7 @@ input::placeholder { color: var(--text2); }
 .chat-time { font-size: 10px; color: var(--text2); padding: 0 4px; }
 
 .chat-input-area { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); }
-#chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; color: var(--text); padding: 9px 12px; font-size: 13px; resize: none; outline: none; max-height: 120px; overflow-y: auto; font-family: inherit; line-height: 1.5; transition: border-color 0.2s; }
+#chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; color: var(--text); padding: 9px 12px; font-size: 16px; resize: none; outline: none; max-height: 120px; overflow-y: auto; font-family: inherit; line-height: 1.5; transition: border-color 0.2s; }
 #chat-input:focus { border-color: var(--accent2); }
 .chat-send-btn { flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--accent2); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, transform 0.1s; }
 .chat-send-btn:hover { opacity: 0.85; }
