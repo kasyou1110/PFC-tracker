@@ -293,6 +293,89 @@
       </div>
     </div>
 
+    <!-- ===== TAB: 履歴 ===== -->
+    <div class="tab-panel" id="panel-history">
+
+      <!-- ── カレンダービュー ── -->
+      <div id="hist-calendar-view">
+        <div class="page-title">履歴</div>
+        <div class="card" style="padding:12px">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="App.histPrevMonth()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="cal-title" id="cal-title"></span>
+            <button class="cal-nav-btn" onclick="App.histNextMonth()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div class="cal-week-labels">
+            <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+      </div>
+
+      <!-- ── 詳細ビュー ── -->
+      <div id="hist-detail-view" style="display:none">
+        <div class="hist-detail-header">
+          <button class="back-btn" onclick="App.closeHistoryDay()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          </button>
+          <div class="page-title" style="margin:0;flex:1" id="hist-detail-date-label"></div>
+          <button class="btn btn-secondary btn-sm" id="hist-edit-btn" onclick="App.toggleHistoryEdit()">編集</button>
+        </div>
+
+        <!-- 2×2 タイミングカード -->
+        <div class="timing-cards-grid" id="timing-cards-grid"></div>
+
+        <!-- 編集パネル -->
+        <div id="hist-edit-panel" style="display:none">
+          <div class="card">
+            <div class="card-title">食品・料理を追加</div>
+            <div class="search-input-wrap" style="margin-bottom:10px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="hist-search-input" placeholder="食品・料理を検索..." style="padding-left:34px" oninput="App.histSearch()">
+            </div>
+            <div id="hist-search-results"></div>
+            <div class="hist-reg-divider"><span>または新しい食品を登録</span></div>
+            <div class="form-group">
+              <input type="text" id="hist-reg-name" placeholder="食品名">
+            </div>
+            <div class="form-row" style="margin-bottom:8px">
+              <div>
+                <label style="font-size:11px;color:var(--text2)">kcal/100g</label>
+                <input type="number" id="hist-reg-kcal" placeholder="0" min="0">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--p-color)">タンパク質 (g)</label>
+                <input type="number" id="hist-reg-p" placeholder="0" min="0" step="0.1">
+              </div>
+            </div>
+            <div class="form-row" style="margin-bottom:10px">
+              <div>
+                <label style="font-size:11px;color:var(--f-color)">脂質 (g)</label>
+                <input type="number" id="hist-reg-f" placeholder="0" min="0" step="0.1">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--c-color)">炭水化物 (g)</label>
+                <input type="number" id="hist-reg-c" placeholder="0" min="0" step="0.1">
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="App.histRegisterAndAdd()">登録して追加</button>
+          </div>
+        </div>
+
+        <!-- AIと相談ボタン -->
+        <div style="text-align:center;padding:4px 0 20px">
+          <button class="btn btn-secondary" style="font-size:12px;padding:8px 24px;display:inline-flex;align-items:center;gap:6px" onclick="App.openHistChat()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            AIと相談
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 
   <!-- Tab bar -->
@@ -320,6 +403,10 @@
     <button class="tab-btn" onclick="App.switchTab('trend',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       推移
+    </button>
+    <button class="tab-btn" onclick="App.switchTab('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      履歴
     </button>
   </nav>
 </div>
@@ -368,6 +455,59 @@
       </div>
     </div>
     <button class="btn btn-primary" onclick="App.confirmAddRecipeToToday()">追加する</button>
+  </div>
+</div>
+
+<!-- 履歴: 食品追加モーダル -->
+<div class="modal-overlay" id="hist-add-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <button class="modal-close" onclick="App.closeHistAddModal()">×</button>
+      <span id="hist-modal-title-text">追加</span>
+    </div>
+    <div id="hist-modal-info" style="margin-bottom:16px"></div>
+    <div id="hist-modal-gram-section">
+      <div class="form-group">
+        <label>グラム数</label>
+        <input type="number" id="hist-modal-gram" placeholder="100" min="1" oninput="App.updateHistModalCalc()">
+      </div>
+      <div id="hist-modal-calc-display" style="margin-bottom:12px"></div>
+    </div>
+    <div class="form-group">
+      <label>食事タイミング</label>
+      <div class="timing-chips" id="hist-modal-timing-chips">
+        <div class="timing-chip active" data-val="朝食" onclick="App.selectHistModalTiming(this)">朝食</div>
+        <div class="timing-chip" data-val="昼食" onclick="App.selectHistModalTiming(this)">昼食</div>
+        <div class="timing-chip" data-val="夕食" onclick="App.selectHistModalTiming(this)">夕食</div>
+        <div class="timing-chip" data-val="間食" onclick="App.selectHistModalTiming(this)">間食</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="App.confirmHistAdd()">追加する</button>
+  </div>
+</div>
+
+<!-- 履歴: AIチャット ボトムシート -->
+<div class="bottom-sheet-overlay" id="hist-chat-overlay" onclick="App.closeHistChat()"></div>
+<div class="bottom-sheet" id="hist-chat-sheet">
+  <div class="bottom-sheet-handle" onclick="App.closeHistChat()">
+    <div class="handle-bar"></div>
+  </div>
+  <div class="bottom-sheet-inner-header">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    <span>AIと相談</span>
+    <button class="chat-clear-btn" onclick="App.clearHistChat()">履歴をクリア</button>
+  </div>
+  <div class="chat-messages" id="hist-chat-messages">
+    <div class="chat-empty">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:6px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <div>この日の食事についてAIに質問できます</div>
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <textarea id="hist-chat-input" placeholder="質問する..." rows="1" oninput="App.autoResizeTextarea(this)" onkeydown="App.handleHistChatKey(event)"></textarea>
+    <button class="chat-send-btn" id="hist-chat-send-btn" onclick="App.sendHistChat()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
   </div>
 </div>
 

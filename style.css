@@ -204,3 +204,57 @@ input::placeholder { color: var(--text2); }
 
 #apikey-status.ok { color: var(--accent); }
 #apikey-status.none { color: var(--accent3); }
+
+/* ── History Calendar ─────────────────────────────────────────── */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-title { font-size: 15px; font-weight: 700; }
+.cal-nav-btn { background: none; border: none; color: var(--text); cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; transition: background 0.15s; }
+.cal-nav-btn:hover { background: var(--bg3); }
+.cal-week-labels { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.cal-week-labels div { text-align: center; font-size: 10px; color: var(--text2); padding: 2px 0; }
+.cal-week-labels div:first-child { color: var(--accent3); }
+.cal-week-labels div:last-child { color: var(--accent2); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-cell { min-height: 46px; border-radius: 6px; padding: 5px 2px 3px; display: flex; flex-direction: column; align-items: center; }
+.cal-cell.clickable { cursor: pointer; transition: background 0.15s; }
+.cal-cell.clickable:hover { background: var(--bg3); }
+.cal-cell.has-data { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.18); }
+.cal-cell.today .cal-cell-num { background: var(--accent); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+.cal-cell.other-month { opacity: 0.3; pointer-events: none; }
+.cal-cell-num { font-size: 12px; line-height: 22px; width: 22px; height: 22px; text-align: center; flex-shrink: 0; }
+.cal-cell-kcal { font-size: 8px; color: var(--accent4); line-height: 1.3; text-align: center; }
+
+/* ── History Detail ───────────────────────────────────────────── */
+.hist-detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.back-btn { background: none; border: none; color: var(--text); cursor: pointer; padding: 4px; display: flex; align-items: center; flex-shrink: 0; }
+.timing-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.timing-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.timing-card-header { padding: 10px 12px 8px; background: var(--bg3); flex-shrink: 0; }
+.timing-card-label { font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.timing-card-kcal { font-size: 20px; font-weight: 800; color: var(--accent4); line-height: 1; }
+.timing-card-kcal span { font-size: 10px; font-weight: 400; }
+.timing-card-pfc { font-size: 10px; color: var(--text2); padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.timing-card-toggle { font-size: 10px; color: var(--text2); padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background 0.15s; flex-shrink: 0; }
+.timing-card-toggle:hover { background: var(--bg3); }
+.timing-card-toggle svg { transition: transform 0.2s; }
+.timing-card-toggle.open svg { transform: rotate(180deg); }
+.timing-card-items { padding: 4px 10px 6px; }
+.timing-card-item { display: flex; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+.timing-card-item:last-child { border-bottom: none; }
+.timing-card-item-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timing-card-item-sub { color: var(--text2); margin: 0 4px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+.timing-card-item-del { background: none; border: none; color: var(--accent3); cursor: pointer; font-size: 15px; padding: 0 2px; flex-shrink: 0; line-height: 1; }
+.hist-reg-divider { display: flex; align-items: center; gap: 10px; margin: 12px 0 10px; }
+.hist-reg-divider::before, .hist-reg-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.hist-reg-divider span { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+/* ── History AI Bottom Sheet ──────────────────────────────────── */
+.bottom-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: none; }
+.bottom-sheet-overlay.open { display: block; }
+.bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; height: 58vh; background: var(--bg2); border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; z-index: 201; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s cubic-bezier(.32,.72,0,1); }
+.bottom-sheet.open { transform: translateY(0); }
+.bottom-sheet-handle { padding: 10px; display: flex; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.handle-bar { width: 40px; height: 4px; background: var(--border); border-radius: 2px; }
+.bottom-sheet-inner-header { display: flex; align-items: center; gap: 8px; padding: 0 14px 10px; font-size: 13px; font-weight: 600; color: var(--accent2); flex-shrink: 0; border-bottom: 1px solid var(--border); }
+.bottom-sheet .chat-messages { flex: 1; overflow-y: auto; min-height: 0; }
+.bottom-sheet .chat-input-area { flex-shrink: 0; padding-bottom: max(env(safe-area-inset-bottom), 8px); }

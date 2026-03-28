@@ -48,6 +48,13 @@ const App = (() => {
   let pfcChart = null;
   let chatHistory = [];        // { role, content, streaming?, error? }
   let chatStreaming = false;
+  let histCalYear = 0;
+  let histCalMonth = 0;
+  let historyDate = null;
+  let historyEditMode = false;
+  let histModalItem = null;    // { type: 'food'|'recipe', data }
+  let histChatHistory = [];
+  let histChatStreaming = false;
 
   // ── Init ──────────────────────────────────────────────────────
   function init() {
@@ -67,6 +74,7 @@ const App = (() => {
     renderFoodMasterList();
     renderSavedRecipes();
     initChat();
+    initHistory();
 
     // Register SW
     if ('serviceWorker' in navigator) {
@@ -85,6 +93,7 @@ const App = (() => {
     if (name === 'register') renderFoodMasterList();
     if (name === 'recipe') { populateFoodSelects(); renderSavedRecipes(); }
     if (name === 'single') populateFoodSelects();
+    if (name === 'history') renderHistoryCalendar();
   }
 
   function switchSubTab(tab, sub, btn) {
@@ -866,6 +875,424 @@ ${mealLines}`;
     }
   }
 
+  // ── History ───────────────────────────────────────────────────
+  function initHistory() {
+    const now = new Date();
+    histCalYear = now.getFullYear();
+    histCalMonth = now.getMonth();
+  }
+
+  function getMealsForDate(dateKey) {
+    return store.get('meals_' + dateKey, []);
+  }
+
+  function saveMealSummaryForDate(dateKey, meals) {
+    const tot = calcTotal(meals);
+    const summaries = store.get('daily_summaries', {});
+    summaries[dateKey] = tot;
+    store.set('daily_summaries', summaries);
+  }
+
+  function addMealEntryForDate(entry, dateKey) {
+    const meals = getMealsForDate(dateKey);
+    meals.push({ ...entry, id: uid(), date: dateKey });
+    store.set('meals_' + dateKey, meals);
+    saveMealSummaryForDate(dateKey, meals);
+    if (dateKey === todayKey()) { renderTodaySummary(); renderTodayMeals(); }
+  }
+
+  function renderHistoryCalendar() {
+    document.getElementById('hist-calendar-view').style.display = '';
+    document.getElementById('hist-detail-view').style.display = 'none';
+
+    const summaries = store.get('daily_summaries', {});
+    const y = histCalYear, m = histCalMonth;
+    document.getElementById('cal-title').textContent = `${y}年${m + 1}月`;
+
+    const firstDow = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const todayStr = todayKey();
+
+    let html = '';
+    for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell"></div>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dk = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const s = summaries[dk];
+      const meals = getMealsForDate(dk);
+      const hasData = (s && s.kcal > 0) || meals.length > 0;
+      const kcal = hasData ? Math.round(s ? s.kcal : calcTotal(meals).kcal) : 0;
+      const cls = ['cal-cell', 'clickable'];
+      if (hasData) cls.push('has-data');
+      if (dk === todayStr) cls.push('today');
+      html += `<div class="${cls.join(' ')}" onclick="App.openHistoryDay('${dk}')">
+        <div class="cal-cell-num">${d}</div>
+        ${hasData ? `<div class="cal-cell-kcal">${kcal}<br>kcal</div>` : ''}
+      </div>`;
+    }
+    document.getElementById('cal-grid').innerHTML = html;
+  }
+
+  function histPrevMonth() {
+    if (histCalMonth === 0) { histCalMonth = 11; histCalYear--; } else histCalMonth--;
+    renderHistoryCalendar();
+  }
+
+  function histNextMonth() {
+    if (histCalMonth === 11) { histCalMonth = 0; histCalYear++; } else histCalMonth++;
+    renderHistoryCalendar();
+  }
+
+  function openHistoryDay(dateKey) {
+    historyDate = dateKey;
+    historyEditMode = false;
+    document.getElementById('hist-calendar-view').style.display = 'none';
+    document.getElementById('hist-detail-view').style.display = '';
+    document.getElementById('hist-edit-btn').textContent = '編集';
+    document.getElementById('hist-edit-panel').style.display = 'none';
+    document.getElementById('hist-search-input').value = '';
+    document.getElementById('hist-search-results').innerHTML = '';
+
+    const p = dateKey.split('-');
+    const dow = ['日','月','火','水','木','金','土'][new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+    document.getElementById('hist-detail-date-label').textContent =
+      `${p[0]}年${+p[1]}月${+p[2]}日（${dow}）`;
+
+    renderHistoryDetail();
+  }
+
+  function closeHistoryDay() {
+    historyDate = null;
+    renderHistoryCalendar();
+  }
+
+  function renderHistoryDetail() {
+    const meals = getMealsForDate(historyDate);
+    const LABEL = { '朝食':'朝', '昼食':'昼', '夕食':'晩', '間食':'間食' };
+    let html = '';
+
+    ['朝食','昼食','夕食','間食'].forEach(timing => {
+      const items = meals.filter(m => (m.timing || '未分類') === timing);
+      const tot = calcTotal(items);
+      const label = LABEL[timing];
+
+      html += `<div class="timing-card">
+        <div class="timing-card-header">
+          <div class="timing-card-label">${label}</div>
+          <div class="timing-card-kcal">${items.length ? Math.round(tot.kcal) : 0}<span> kcal</span></div>
+        </div>
+        <div class="timing-card-pfc">P ${tot.p.toFixed(1)}g &nbsp;F ${tot.f.toFixed(1)}g &nbsp;C ${tot.c.toFixed(1)}g</div>`;
+
+      if (items.length) {
+        html += `<div class="timing-card-toggle" onclick="App.toggleTimingCard(this)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+          ${items.length}品を表示
+        </div>
+        <div class="timing-card-items" style="display:none">`;
+        items.forEach(m => {
+          html += `<div class="timing-card-item">
+            <span class="timing-card-item-name">${escHtml(m.name)}</span>
+            <span class="timing-card-item-sub">${m.gram ? m.gram+'g · ' : ''}${Math.round(m.kcal)}kcal</span>
+            ${historyEditMode ? `<button class="timing-card-item-del" onclick="App.histDeleteMeal('${m.id}')">×</button>` : ''}
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    });
+
+    document.getElementById('timing-cards-grid').innerHTML = html;
+  }
+
+  function toggleTimingCard(toggleEl) {
+    const items = toggleEl.nextElementSibling;
+    if (!items) return;
+    const isOpen = items.style.display !== 'none';
+    items.style.display = isOpen ? 'none' : '';
+    toggleEl.classList.toggle('open', !isOpen);
+    const txt = toggleEl.querySelector('svg').nextSibling;
+    if (txt) txt.textContent = isOpen ? ` ${toggleEl.dataset.count || ''}品を表示` : ' 閉じる';
+  }
+
+  function toggleHistoryEdit() {
+    historyEditMode = !historyEditMode;
+    document.getElementById('hist-edit-btn').textContent = historyEditMode ? '完了' : '編集';
+    document.getElementById('hist-edit-panel').style.display = historyEditMode ? '' : 'none';
+    if (!historyEditMode) {
+      document.getElementById('hist-search-input').value = '';
+      document.getElementById('hist-search-results').innerHTML = '';
+    }
+    renderHistoryDetail();
+  }
+
+  function histSearch() {
+    const q = document.getElementById('hist-search-input').value.trim().toLowerCase();
+    const container = document.getElementById('hist-search-results');
+    if (!q) { container.innerHTML = ''; return; }
+
+    const fr = foods.filter(f => f.name.toLowerCase().includes(q));
+    const rr = recipes.filter(r => r.name.toLowerCase().includes(q));
+    if (!fr.length && !rr.length) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0">見つかりませんでした</div>';
+      return;
+    }
+    let html = '';
+    fr.forEach(f => {
+      html += `<div class="search-result-item" onclick="App.histOpenAddModal('food','${f.id}')">
+        <div><div class="search-result-name">${escHtml(f.name)}</div></div>
+        <div class="search-result-kcal">${f.kcal} kcal/100g</div>
+      </div>`;
+    });
+    rr.forEach(r => {
+      const tot = calcTotal(r.ingredients);
+      html += `<div class="search-result-item" onclick="App.histOpenAddModal('recipe','${r.id}')">
+        <div><div class="search-result-name" style="color:var(--accent2)">${escHtml(r.name)}</div></div>
+        <div class="search-result-kcal">${Math.round(tot.kcal)} kcal</div>
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function histOpenAddModal(type, id) {
+    if (type === 'food') {
+      const food = foods.find(f => f.id === id);
+      if (!food) return;
+      histModalItem = { type: 'food', data: food };
+      document.getElementById('hist-modal-title-text').textContent = food.name + ' を追加';
+      document.getElementById('hist-modal-gram-section').style.display = '';
+      document.getElementById('hist-modal-gram').value = '';
+      document.getElementById('hist-modal-calc-display').innerHTML = '';
+      document.getElementById('hist-modal-info').innerHTML =
+        `<div style="font-size:12px;color:var(--text2);margin-bottom:6px">100gあたり</div>
+         <div class="nutrition-row">
+           <div class="nutrition-badge"><div class="n-val text-kcal">${food.kcal}</div><div class="n-lbl">kcal</div></div>
+           <div class="nutrition-badge"><div class="n-val text-p">${food.p}g</div><div class="n-lbl">P</div></div>
+           <div class="nutrition-badge"><div class="n-val text-f">${food.f}g</div><div class="n-lbl">F</div></div>
+           <div class="nutrition-badge"><div class="n-val text-c">${food.c}g</div><div class="n-lbl">C</div></div>
+         </div>`;
+    } else {
+      const recipe = recipes.find(r => r.id === id);
+      if (!recipe) return;
+      const tot = calcTotal(recipe.ingredients);
+      histModalItem = { type: 'recipe', data: recipe };
+      document.getElementById('hist-modal-title-text').textContent = recipe.name + ' を追加';
+      document.getElementById('hist-modal-gram-section').style.display = 'none';
+      document.getElementById('hist-modal-info').innerHTML =
+        `<div style="font-size:13px;font-weight:600;margin-bottom:8px">${escHtml(recipe.name)}</div>
+         <div class="nutrition-row">
+           <div class="nutrition-badge"><div class="n-val text-kcal">${Math.round(tot.kcal)}</div><div class="n-lbl">kcal</div></div>
+           <div class="nutrition-badge"><div class="n-val text-p">${tot.p.toFixed(1)}g</div><div class="n-lbl">P</div></div>
+           <div class="nutrition-badge"><div class="n-val text-f">${tot.f.toFixed(1)}g</div><div class="n-lbl">F</div></div>
+           <div class="nutrition-badge"><div class="n-val text-c">${tot.c.toFixed(1)}g</div><div class="n-lbl">C</div></div>
+         </div>`;
+    }
+    document.querySelectorAll('#hist-modal-timing-chips .timing-chip').forEach((c, i) => c.classList.toggle('active', i === 0));
+    document.getElementById('hist-add-modal').classList.add('open');
+  }
+
+  function closeHistAddModal() {
+    document.getElementById('hist-add-modal').classList.remove('open');
+    histModalItem = null;
+  }
+
+  function updateHistModalCalc() {
+    if (!histModalItem || histModalItem.type !== 'food') return;
+    const gram = parseFloat(document.getElementById('hist-modal-gram').value);
+    const food = histModalItem.data;
+    const el = document.getElementById('hist-modal-calc-display');
+    if (!gram || gram <= 0) { el.innerHTML = ''; return; }
+    const r = gram / 100;
+    el.innerHTML = `<div class="nutrition-row">
+      <div class="nutrition-badge"><div class="n-val text-kcal">${(food.kcal*r).toFixed(0)}</div><div class="n-lbl">kcal</div></div>
+      <div class="nutrition-badge"><div class="n-val text-p">${(food.p*r).toFixed(1)}g</div><div class="n-lbl">P</div></div>
+      <div class="nutrition-badge"><div class="n-val text-f">${(food.f*r).toFixed(1)}g</div><div class="n-lbl">F</div></div>
+      <div class="nutrition-badge"><div class="n-val text-c">${(food.c*r).toFixed(1)}g</div><div class="n-lbl">C</div></div>
+    </div>`;
+  }
+
+  function selectHistModalTiming(el) {
+    document.querySelectorAll('#hist-modal-timing-chips .timing-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function confirmHistAdd() {
+    if (!histModalItem || !historyDate) return;
+    const timing = document.querySelector('#hist-modal-timing-chips .timing-chip.active')?.dataset.val || '朝食';
+    let entry;
+    if (histModalItem.type === 'food') {
+      const gram = parseFloat(document.getElementById('hist-modal-gram').value);
+      const food = histModalItem.data;
+      if (!gram || gram <= 0) { toast('グラム数を入力してください'); return; }
+      const ratio = gram / 100;
+      entry = { name: food.name, gram, timing, kcal: food.kcal*ratio, p: food.p*ratio, f: food.f*ratio, c: food.c*ratio };
+    } else {
+      const recipe = histModalItem.data;
+      const tot = calcTotal(recipe.ingredients);
+      entry = { name: recipe.name, timing, kcal: tot.kcal, p: tot.p, f: tot.f, c: tot.c };
+    }
+    addMealEntryForDate(entry, historyDate);
+    closeHistAddModal();
+    renderHistoryDetail();
+    renderHistoryCalendar();
+    // Re-show detail after calendar re-render
+    document.getElementById('hist-calendar-view').style.display = 'none';
+    document.getElementById('hist-detail-view').style.display = '';
+    toast('追加しました');
+  }
+
+  function histRegisterAndAdd() {
+    const name = document.getElementById('hist-reg-name').value.trim();
+    const kcal = parseFloat(document.getElementById('hist-reg-kcal').value) || 0;
+    const p    = parseFloat(document.getElementById('hist-reg-p').value) || 0;
+    const f    = parseFloat(document.getElementById('hist-reg-f').value) || 0;
+    const c    = parseFloat(document.getElementById('hist-reg-c').value) || 0;
+    if (!name) { toast('食品名を入力してください'); return; }
+    const newFood = { id: uid(), name, kcal, p, f, c };
+    foods.push(newFood);
+    store.set('foods', foods);
+    populateFoodSelects();
+    ['hist-reg-name','hist-reg-kcal','hist-reg-p','hist-reg-f','hist-reg-c'].forEach(id => { document.getElementById(id).value = ''; });
+    histOpenAddModal('food', newFood.id);
+    toast('食品を登録しました');
+  }
+
+  function histDeleteMeal(mealId) {
+    const meals = getMealsForDate(historyDate).filter(m => m.id !== mealId);
+    store.set('meals_' + historyDate, meals);
+    saveMealSummaryForDate(historyDate, meals);
+    if (historyDate === todayKey()) { renderTodaySummary(); renderTodayMeals(); }
+    renderHistoryDetail();
+  }
+
+  // ── History AI Chat ────────────────────────────────────────────
+  function openHistChat() {
+    document.getElementById('hist-chat-overlay').classList.add('open');
+    document.getElementById('hist-chat-sheet').classList.add('open');
+    renderHistChatHistory();
+  }
+
+  function closeHistChat() {
+    document.getElementById('hist-chat-overlay').classList.remove('open');
+    document.getElementById('hist-chat-sheet').classList.remove('open');
+  }
+
+  function clearHistChat() {
+    histChatHistory = [];
+    histChatStreaming = false;
+    renderHistChatHistory();
+  }
+
+  function renderHistChatHistory() {
+    const container = document.getElementById('hist-chat-messages');
+    if (!histChatHistory.length) {
+      container.innerHTML = `<div class="chat-empty">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:6px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <div>この日の食事についてAIに質問できます</div>
+      </div>`;
+      return;
+    }
+    container.innerHTML = histChatHistory.map(m => {
+      const isUser = m.role === 'user';
+      const body = m.streaming
+        ? escHtml(m.content) + '<span class="typing-cursor">▋</span>'
+        : m.error ? `<span style="color:var(--accent3)">${escHtml(m.content)}</span>`
+                  : escHtml(m.content).replace(/\n/g, '<br>');
+      return `<div class="chat-msg ${isUser ? 'user' : 'assistant'}">${isUser ? escHtml(m.content) : body}</div>`;
+    }).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendHistChat() {
+    const input = document.getElementById('hist-chat-input');
+    const msg = input.value.trim();
+    if (!msg || histChatStreaming) return;
+    input.value = '';
+    input.style.height = 'auto';
+    await sendHistChatMessage(msg);
+  }
+
+  function handleHistChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendHistChat(); }
+  }
+
+  function buildHistChatSystemPrompt() {
+    const meals = getMealsForDate(historyDate);
+    const tot = calcTotal(meals);
+    const pct = k => Math.round(tot[k] / GOALS[k] * 100);
+    const lines = meals.length
+      ? meals.map(m => `- ${m.name}${m.gram ? ` (${m.gram}g)` : ''} [${m.timing || '未分類'}] ${Math.round(m.kcal)}kcal P${m.p.toFixed(1)} F${m.f.toFixed(1)} C${m.c.toFixed(1)}`).join('\n')
+      : '（記録なし）';
+    return `あなたは栄養士アシスタントです。${historyDate}の食事データを基にアドバイスをしてください。
+
+### 目標値
+カロリー: ${GOALS.kcal}kcal / タンパク質: ${GOALS.p}g / 脂質: ${GOALS.f}g / 炭水化物: ${GOALS.c}g
+
+### ${historyDate}の摂取量
+カロリー: ${Math.round(tot.kcal)}kcal（目標${pct('kcal')}%）／P: ${tot.p.toFixed(1)}g（${pct('p')}%）／F: ${tot.f.toFixed(1)}g（${pct('f')}%）／C: ${tot.c.toFixed(1)}g（${pct('c')}%）
+
+### 食事記録
+${lines}`;
+  }
+
+  async function sendHistChatMessage(userMsg) {
+    const apiKey = store.get('apikey', '');
+    if (!apiKey) { toast('APIキーを設定してください（今日タブの歯車ボタン）'); return; }
+
+    histChatHistory.push({ role: 'user', content: userMsg });
+    histChatHistory.push({ role: 'assistant', content: '', streaming: true });
+    histChatStreaming = true;
+    document.getElementById('hist-chat-send-btn').disabled = true;
+    renderHistChatHistory();
+
+    try {
+      const messages = histChatHistory.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
+          'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1024, system: buildHistChatSystemPrompt(), messages, stream: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      const last = () => histChatHistory[histChatHistory.length - 1];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const ev = JSON.parse(data);
+            if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+              last().content += ev.delta.text;
+              renderHistChatHistory();
+            }
+          } catch {}
+        }
+      }
+      last().streaming = false;
+    } catch (e) {
+      const last = histChatHistory[histChatHistory.length - 1];
+      last.streaming = false; last.error = true; last.content = 'エラー: ' + e.message;
+    } finally {
+      histChatStreaming = false;
+      document.getElementById('hist-chat-send-btn').disabled = false;
+      const last = histChatHistory[histChatHistory.length - 1];
+      if (last) last.streaming = false;
+      renderHistChatHistory();
+    }
+  }
+
   // ── Utilities ─────────────────────────────────────────────────
   function calcTotal(items) {
     return items.reduce((a, b) => ({ kcal: a.kcal+b.kcal, p: a.p+b.p, f: a.f+b.f, c: a.c+b.c }), {kcal:0,p:0,f:0,c:0});
@@ -897,6 +1324,9 @@ ${mealLines}`;
   document.getElementById('recipe-add-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('recipe-add-modal')) closeRecipeModal();
   });
+  document.getElementById('hist-add-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('hist-add-modal')) closeHistAddModal();
+  });
 
   // Initialize on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', init);
@@ -914,5 +1344,10 @@ ${mealLines}`;
     toggleApikeyCard, saveApiKey,
     sendChat, sendQuick, clearChat,
     autoResizeTextarea, handleChatKey,
+    histPrevMonth, histNextMonth, openHistoryDay, closeHistoryDay,
+    toggleTimingCard, toggleHistoryEdit,
+    histSearch, histOpenAddModal, closeHistAddModal, updateHistModalCalc, selectHistModalTiming, confirmHistAdd,
+    histRegisterAndAdd, histDeleteMeal,
+    openHistChat, closeHistChat, clearHistChat, sendHistChat, handleHistChatKey,
   };
 })();
