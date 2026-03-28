@@ -257,4 +257,6 @@ input::placeholder { color: var(--text2); }
 .handle-bar { width: 40px; height: 4px; background: var(--border); border-radius: 2px; }
 .bottom-sheet-inner-header { display: flex; align-items: center; gap: 8px; padding: 0 14px 10px; font-size: 13px; font-weight: 600; color: var(--accent2); flex-shrink: 0; border-bottom: 1px solid var(--border); }
 .bottom-sheet .chat-messages { flex: 1; overflow-y: auto; min-height: 0; }
-.bottom-sheet .chat-input-area { flex-shrink: 0; padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+.bottom-sheet .chat-input-area { flex-shrink: 0; padding: 10px 12px; padding-bottom: max(env(safe-area-inset-bottom), 10px); }
+#hist-chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; color: var(--text); padding: 12px 14px; font-size: 16px; resize: none; outline: none; min-height: 44px; max-height: 120px; overflow-y: auto; font-family: inherit; line-height: 1.5; transition: border-color 0.2s; }
+#hist-chat-input:focus { border-color: var(--accent2); }
